@@ -17,22 +17,6 @@
 
 defined( 'ABSPATH' ) || exit;
 
-function get_subtotal_in_cart( $include_change = false ) {
-    return get_total_in_cart( $include_change );
-}
-
-function get_total_in_cart($include_change = false) {
-    $total = 0;
-    foreach ( WC()->cart->get_cart() as $cart_item_key => $cart_item ) { 
-        $_product   = apply_filters( 'woocommerce_cart_item_product', $cart_item['data'], $cart_item, $cart_item_key );
-        $_price = apply_filters( 'wsa_price_in_cart', $_product->get_price(), $_product->get_ID(), $cart_item_key );
-        $total += $_price * $cart_item['quantity'];
-    }
-    return $include_change ? 
-        wc_price( $total ) . " | ".wc_price( $total*WooSellerAssistant::get_rate_usd(), ["currency" => "VES"] ) :
-        wc_price( $total );
-}
-
 ?>
 <div class="cart_totals <?php echo ( WC()->customer->has_calculated_shipping() ) ? 'calculated_shipping' : ''; ?>">
 
@@ -44,7 +28,7 @@ function get_total_in_cart($include_change = false) {
 
 		<tr class="cart-subtotal">
 			<th><?php esc_html_e( 'Subtotal', 'woocommerce' ); ?></th>
-			<td data-title="<?php esc_attr_e( 'Subtotal', 'woocommerce' ); ?>"><?=get_subtotal_in_cart()?></td>
+			<td data-title="<?php esc_attr_e( 'Subtotal', 'woocommerce' ); ?>"><?=WooSellerAssistant::get_subtotal_in_cart()?></td>
 		</tr>
 
 		<?php foreach ( WC()->cart->get_coupons() as $code => $coupon ) : ?>
@@ -112,7 +96,7 @@ function get_total_in_cart($include_change = false) {
 
 		<tr class="order-total">
 			<th><?php esc_html_e( 'Total', 'woocommerce' ); ?></th>
-			<td data-title="<?php esc_attr_e( 'Total', 'woocommerce' ); ?>"><?=get_total_in_cart(true)?></td>
+			<td data-title="<?php esc_attr_e( 'Total', 'woocommerce' ); ?>"><?=WooSellerAssistant::get_total_in_cart(true)?></td>
 		</tr>
 
 		<?php do_action( 'woocommerce_cart_totals_after_order_total' ); ?>
