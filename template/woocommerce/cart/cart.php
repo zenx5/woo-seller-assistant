@@ -17,12 +17,12 @@
 
 defined( 'ABSPATH' ) || exit;
 
-function input_price($name, $price, $symbol, $disabled = false) {
+function input_price($id, $name, $price, $symbol, $disabled = false) {
 	ob_start();?>
 		<span style="display:flex; flex-direction:row; align-items:center;justify-content: center; gap: 5px;">
 			<input
 				type="number"
-				id="<?=$name?>"
+				id="<?=$id?>"
 				name="<?=$name?>"
 				step="0.01"
 				value="<?=number_format($price,2)?>"
@@ -61,6 +61,7 @@ do_action( 'woocommerce_before_cart' ); ?>
 			foreach ( WC()->cart->get_cart() as $cart_item_key => $cart_item ) {
 				$_product   = apply_filters( 'woocommerce_cart_item_product', $cart_item['data'], $cart_item, $cart_item_key );
 				$product_id = apply_filters( 'woocommerce_cart_item_product_id', $cart_item['product_id'], $cart_item, $cart_item_key );
+				$_price = apply_filters( 'wsa_price_in_cart', $_product->get_price(), $_product->get_ID(), $cart_item_key );
 
 				if ( $_product && $_product->exists() && $cart_item['quantity'] > 0 && apply_filters( 'woocommerce_cart_item_visible', true, $cart_item, $cart_item_key ) ) {
 					$product_permalink = apply_filters( 'woocommerce_cart_item_permalink', $_product->is_visible() ? $_product->get_permalink( $cart_item ) : '', $cart_item, $cart_item_key );
@@ -116,31 +117,17 @@ do_action( 'woocommerce_before_cart' ); ?>
 						</td>
 
 						<td class="product-price" data-title="<?php esc_attr_e( 'Price', 'woocommerce' ); ?>">
-							<span style="display:flex; flex-direction:column; width:50%; gap:5px;">
-								<input type="hidden" name="<?="cart[{$cart_item_key}][rate]"?>" value="<?=get_option("wsa_rate_usd", 1)?>" />
-								<?=input_price("cart[{$cart_item_key}][price]", $_product->get_price(), "$")?>
-								<?=input_price('priceusd_'.$_product->get_ID(), $_product->get_price()*get_option("wsa_rate_usd", 1), "Bs", true)?>
+							<span style="display:flex; flex-direction:column; width:80%; gap:5px; align-items:center;">
+								<input type="hidden" name="<?="cart[rate]"?>" value="<?=WooSellerAssistant::get_rate_usd()?>" />
+								<?=input_price(
+									"priceves_".$_product->get_ID(),
+									"cart[{$cart_item_key}][price]",
+									$_price,
+									"$")?>
+								<span>
+									<?= wc_price( $_price*WooSellerAssistant::get_rate_usd(), [ "currency" => "VES"] ) ?>
+								</span>
 							</span>
-							<script>
-								(function(){
-									const id = "<?=$_product->get_ID()?>";
-									const rate = <?=get_option('rate_use', 20)?>;
-									const input1 = document.querySelector(`#priceves_${id}`)
-									const input2 = document.querySelector(`#priceusd_${id}`)
-									function changeVES (event) {
-										input2.value = (Number(event.target.value) * rate).toFixed(2)
-									}
-									function changeUSD (event) {
-										input1.value = (Number(event.target.value) / rate).toFixed(2)
-									}
-									
-									input1.addEventListener( 'keyup', changeVES )
-									input1.addEventListener( 'change', changeVES )
-									//input2.addEventListener( 'keyup', changeUSD )
-									//input2.addEventListener( 'change', changeUSD )
-
-								})()
-							</script>
 						</td>
 
 						<td class="product-quantity" data-title="<?php esc_attr_e( 'Quantity', 'woocommerce' ); ?>">
@@ -171,7 +158,13 @@ do_action( 'woocommerce_before_cart' ); ?>
 
 						<td class="product-subtotal" data-title="<?php esc_attr_e( 'Subtotal', 'woocommerce' ); ?>">
 							<?php
-								echo apply_filters( 'woocommerce_cart_item_subtotal', WC()->cart->get_product_subtotal( $_product, $cart_item['quantity'] ), $cart_item, $cart_item_key ); // PHPCS: XSS ok.
+								// echo apply_filters( 
+								// 	'woocommerce_cart_item_subtotal',
+								// 	WC()->cart->get_product_subtotal( $_product, $cart_item['quantity'] ),
+								// 	$cart_item,
+								// 	$cart_item_key ); // PHPCS: XSS ok.
+								
+								echo wc_price( $_price*$cart_item['quantity'] );
 							?>
 						</td>
 					</tr>
@@ -185,7 +178,7 @@ do_action( 'woocommerce_before_cart' ); ?>
 			<tr>
 				<td colspan="6" class="actions">
 
-					<?php if ( wc_coupons_enabled() ) { ?>
+					<?php if ( false && wc_coupons_enabled() ) { ?>
 						<div class="coupon">
 							<label for="coupon_code" class="screen-reader-text"><?php esc_html_e( 'Coupon:', 'woocommerce' ); ?></label> <input type="text" name="coupon_code" class="input-text" id="coupon_code" value="" placeholder="<?php esc_attr_e( 'Coupon code', 'woocommerce' ); ?>" /> <button type="submit" class="button<?php echo esc_attr( wc_wp_theme_get_element_class_name( 'button' ) ? ' ' . wc_wp_theme_get_element_class_name( 'button' ) : '' ); ?>" name="apply_coupon" value="<?php esc_attr_e( 'Apply coupon', 'woocommerce' ); ?>"><?php esc_attr_e( 'Apply coupon', 'woocommerce' ); ?></button>
 							<?php do_action( 'woocommerce_cart_coupon' ); ?>
