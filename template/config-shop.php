@@ -1,9 +1,11 @@
 <?php 
-    $rate = get_option("wsa_rate_usd", 20);
-
+    $rate = WooSellerAssistant::get_rate_usd();
+    
 ?>
-
 <h1>Configuracion de la Tienda</h1>
+<script>
+    console.log(<?=json_encode( SC_Rates::get_row_at() )?>)
+</script>
 <div style="padding:20px 0px">
     <table>
         <tr>

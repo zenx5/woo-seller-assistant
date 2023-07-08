@@ -1,10 +1,16 @@
 <?php
 
+defined( 'ABSPATH' ) || exit;
+
+require_once 'class-second-currency-rates.php';
+require_once 'class-wc-cart-2.php';
+
 
 class WooSellerAssistant {
 
     public static function activation() {
         update_option("wsa_rate_usd", 1);
+        SC_Rates::create_table();
     }
 
     public static function deactivation() {
@@ -15,21 +21,46 @@ class WooSellerAssistant {
         add_filter( 'woocommerce_locate_template', [__CLASS__, 'template_replace'],1,3);
         add_action( 'admin_menu', [__CLASS__, 'admin_menu']);
         add_action( 'wp_ajax_update_config', [__CLASS__, 'update_config']);
-        add_action( 'wp_loaded', array( __CLASS__, 'update_price_action' ), 20 );
+        remove_action( 'wp_loaded', array( 'WC_Form_Handler', 'update_cart_action' ), 20 );
+        add_action( 'wp_loaded', array( 'WC_Cart_Two', 'update_cart_action' ), 20 );
+        add_filter( 'wsa_price_in_cart', [__CLASS__, 'get_price_in_cart'],1,3);
     }
 
-    public static function update_price_action() {
-        if( !isset($_POST['update_cart']) ) return;
-        // DEBO HACER UN HANDLER PARA ACTUALIZAR EL PRECIO DEL PRODUCTO EN LA ORDEN Y TAMBIEN GUARDAR EL RATE DE LA ORDEN
+    public static function set_rate_usd( $value = 1 ) {
+        SC_Rates::new_rate([
+            "currency" => "USD",
+            "value" => $value,
+            "target" => "[]",
+            "created_at" => date("Y-m-d H:i:s")
+        ]);
+    }
+
+    public static function get_rate_usd($currency = "USD", $date = null) {
+        try {
+            $row_rate = SC_Rates::get_row_at($currency, $date);
+            return floatval( $row_rate->value );
+        } catch(Exception $error) {
+            return 1;
+        }
+    }
+
+    public static function get_price_in_cart( $product_price, $product_id, $cart_item_key ) {
+        return get_option('price_'.$cart_item_key.'_'.$product_id, $product_price );
+    }
+
+    public static function get_tag_cart() {
+        $term_cart = get_terms( array(
+            'taxonomy'   => 'product_tag',
+            'name' => '_into_cart',
+            'hide_empty' => false,
+        ) );
+        return $term_cart[0]->term_id;
     }
 
     public static function update_config() {
-        update_option(
-            "wsa_rate_usd", 
-            isset($_POST['wsa_rate_usd']) ? 
-                $_POST['wsa_rate_usd'] : 
-                get_option("wsa_rate_usd", 1)
-        );
+        if( isset($_POST['wsa_rate_usd']) ) {
+            WooSellerAssistant::set_rate_usd( $_POST['wsa_rate_usd'] );
+        }
         echo 1;
         die();
     }
