@@ -2,6 +2,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
+require_once 'class-zoho-books.php';
 require_once 'class-second-currency-rates.php';
 require_once 'class-wc-cart-2.php';
 
@@ -71,6 +72,15 @@ class WooSellerAssistant {
             WooSellerAssistant::get_rate_usd()
         );
         // crear factura en Books
+        //self::order_to_invoice( $order );
+    }
+
+    public static function order_to_data_invoice($order) {
+        $data = [
+
+        ];
+
+        ZohoBooks::create_invoice($data);
     }
 
     public static function js_head() {
