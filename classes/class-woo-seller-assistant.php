@@ -184,6 +184,7 @@ class WooSellerAssistant {
             "total" => $price * $quantity
         ]);
         $order->set_total( self::get_total_in_cart(false,true) );
+        delete_option( 'price_'.$cart_item_key.'_'.$product_id );
         return $item;
     }
 
