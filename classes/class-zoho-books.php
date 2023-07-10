@@ -1,8 +1,12 @@
 <?php
 
-class ZohoBooks {
+include 'class-zoho-api.php';
 
-    public static function create_invoice($data = []) {
+class ZohoBooks extends ZohoApi {
+
+
+
+    public function create_invoice($data = []) {
         $url = "https://www.zohoapis.com/books/v3/invoices?organization_id=$organization_id";
         $headers = [
             'Authorization:  Zoho-oauthtoken '.get_option('wsa_zoho_books_token', ''),

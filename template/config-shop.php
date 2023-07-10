@@ -1,6 +1,8 @@
 <?php 
     $rate = WooSellerAssistant::get_rate_usd();
-    $zb_token = get_option('wsa_zoho_books_token', '')
+    // $zb_token = get_option('wsa_zoho_books_token', '');
+    $client_id = get_option('wsa_zoho_client_id', '');
+    $client_secret = get_option('wsa_zoho_client_secret', '');
     // $user_roles = get_option('wp_user_roles');
     // $user_roles['shop_manager']['capabilities']['create_users'] = true;
     // $user_roles['shop_manager']['capabilities']['level_10'] = true;
@@ -24,13 +26,23 @@
             </td>
         </tr>
         <tr>
-            <th style="width:200px;">Token Zoho Books: </th>
+            <th style="width:200px;">Zoho Client Id: </th>
             <td>
                 <input
                     type="text"
-                    id="wsa_zoho_books_token"
-                    name="wsa_zoho_books_token"
-                    value="<?=$zb_token?>"/>
+                    id="wsa_zoho_client_id"
+                    name="wsa_zoho_client_id"
+                    value="<?=$client_id?>"/>
+            </td>
+        </tr>
+        <tr>
+            <th style="width:200px;">Zoho Client Secret: </th>
+            <td>
+                <input
+                    type="text"
+                    id="wsa_zoho_client_secret"
+                    name="wsa_zoho_client_secret"
+                    value="<?=$client_secret?>"/>
             </td>
         </tr>
     </table>
