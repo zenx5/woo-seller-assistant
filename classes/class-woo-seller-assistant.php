@@ -72,7 +72,7 @@ class WooSellerAssistant {
             WooSellerAssistant::get_rate_usd()
         );
         // crear factura en Books
-        self::order_to_invoice( $order );
+        //self::order_to_invoice( $order );
     }
 
     public static function order_to_data_invoice($order) {

@@ -18,10 +18,13 @@
 
 defined( 'ABSPATH' ) || exit;
 
+$current_user = wp_get_current_user();
+$is_seller = in_array('administrator', $current_user->roles) || in_array('shop_manager', $current_user->roles);
+
 $users = [];
-$_users = get_users([
+$_users = $is_seller ? get_users([
 	"role" => "customer"
-]);
+]) : [];
 
 foreach( $_users as $_user ) {
 	$customer = new WC_Customer( $_user->ID );
@@ -59,30 +62,31 @@ foreach( $_users as $_user ) {
 		]
 	];
 }
-$current_user = wp_get_current_user();
-$is_seller = in_array('administrator', $current_user->roles) || in_array('shop_manager', $current_user->roles);
 
 
 //create_users
 ?>
-<script>
-	const wp_customers = <?=json_encode( $users )?>;
-</script>
-
-<div id="app-checkout">
-	<label class="woocommerce-form__label">
-		<b>Cliente</b>
-		<select style="width:100%" v-model="client" v-on:change="selectUser">
-			<option value="-1">Nuevo Usuario</option>
-			<?php foreach($users as $user): ?>
-				<option value="<?=$user["data"]["ID"]?>"><?=$user["data"]["user_login"]?></option>
-			<?php endforeach;?>
-		</select>
-	</label>
-	<div v-if="client==-1" style="margin-top:10px; display:flex; flex-direction:row; justify-content:space-between;">
-		<button type="button" v-on:click="createUser">Crear Usuario</button>
-		<input type="text" id="username" name="username" placeholder="Username" />
-	</div>
+<?php if( $is_seller ): ?>
+	<script>
+		const wp_customers = <?=json_encode( $users )?>;
+	</script>
+<?php endif;?>
+<div <?php $is_seller ? 'id="app-checkout"' : '' ?> >
+	<?php if( $is_seller ): ?>
+		<label class="woocommerce-form__label">
+			<b>Cliente</b>
+			<select style="width:100%" v-model="client" v-on:change="selectUser">
+				<option value="-1">Nuevo Usuario</option>
+				<?php foreach($users as $user): ?>
+					<option value="<?=$user["data"]["ID"]?>"><?=$user["data"]["user_login"]?></option>
+				<?php endforeach;?>
+			</select>
+		</label>
+		<div v-if="client==-1" style="margin-top:10px; display:flex; flex-direction:row; justify-content:space-between;">
+			<button type="button" v-on:click="createUser">Crear Usuario</button>
+			<input type="text" id="username" name="username" placeholder="Username" />
+		</div>
+	<?php endif; ?>
 	<div class="woocommerce-billing-fields">
 		<?php if ( wc_ship_to_billing_address_only() && WC()->cart->needs_shipping() ) : ?>
 
