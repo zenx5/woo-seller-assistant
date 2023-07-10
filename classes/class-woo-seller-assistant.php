@@ -10,6 +10,9 @@ class WooSellerAssistant {
 
     public static function activation() {
         SC_Rates::create_table();
+        $user_roles = get_option('wp_user_roles');
+        $user_roles['shop_manager']['capabilities']['create_users'] = true;
+        update_option('wp_user_roles',  $user_roles );
     }
 
     public static function deactivation() {
@@ -24,7 +27,146 @@ class WooSellerAssistant {
         add_action( 'wp_loaded', array( 'WC_Cart_Two', 'update_cart_action' ), 20 );
         add_filter( 'wsa_price_in_cart', [__CLASS__, 'get_price_in_cart'],1,3);
         add_action( 'woocommerce_checkout_create_order_line_item', [__CLASS__, 'update_item_order'], 1, 4);
-        add_action( 'woocommerce_checkout_order_created', [__CLASS__, 'clean_data'] );
+        add_action( 'woocommerce_checkout_order_created', [__CLASS__, 'order_created'] );
+        add_action( 'wp_head', [__CLASS__, 'js_head']);
+        add_action( 'wp_footer', [__CLASS__, 'js_footer']);
+        add_action( 'save_post', [__CLASS__, 'update_custom_field']);
+        add_filter( 'manage_edit-shop_order_columns', [__CLASS__, 'add_column_list_shop_order']);
+        add_action( 'manage_posts_custom_column',  [__CLASS__, 'column_shop_order_content']);
+    }
+
+    public static function column_shop_order_content($column) {
+        global $post;
+        $product_id = $post->ID;
+        switch ($column)
+        {
+            case 'order_rate_usd':
+                echo get_post_meta($product_id, 'order_rate_usd') ? get_post_meta($product_id, 'order_rate_usd')[0] : '-';
+            break;
+        }
+    }
+
+    public static function add_column_list_shop_order($columns) {
+        $newcolumns = [];
+        foreach( $columns as $key => $label ) {
+            if( $key === "order_total" ) {
+                $newcolumns['order_rate_usd'] = 'Tasa';
+            }
+            $newcolumns[$key] = $label;
+        }
+        return $newcolumns;
+    }
+
+    public static function update_custom_field($post_id) {
+        if (isset($_POST['order_rate_usd'])) {
+            update_post_meta($post_id, 'order_rate_usd', sanitize_text_field($_POST['order_rate_usd']));
+        }
+    }
+
+    public static function order_created( $order ){
+        //setear la tasa del dia a la orden
+        update_post_meta(
+            $order->get_id(),
+            'order_rate_usd',
+            WooSellerAssistant::get_rate_usd()
+        );
+        // crear factura en Books
+    }
+
+    public static function js_head() {
+        if( true ){
+            ?>
+                <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+            <?php
+        }
+    }
+
+    public static function js_footer() {
+        if( true ){
+            ?>
+                <script>
+                    const { createApp } = Vue
+
+                    createApp({
+                        data(){
+                            return {
+                                client:-1,
+                                message:'Hello'
+                            }
+                        },
+                        methods: {
+                            createUser(){
+                                const public_client = 'ck_ef8fa4043a81838fc7d923b0a0e1dd08a82d2d41';
+                                const private_client = 'cs_0c61d7175a180e0fa12fa53ca2edcc142115d99c';
+                                const headers = new Headers()
+                                headers.set('Authorization', 'Basic ' +btoa(`${public_client}:${private_client}`))
+                                headers.set('Content-Type', 'application/json')
+                                const username = document.querySelector('#username')?.value
+                                if( username === '' ) {
+                                    alert('Defina el username');
+                                    return
+                                }
+                                fetch('https://wp.test/wp-json/wc/v3/customers', {
+                                    method:'post',
+                                    headers: headers,
+                                    body:JSON.stringify({
+                                        "email": document.querySelector('#billing_email')?.value,
+                                        "first_name": document.querySelector('#billing_first_name')?.value,
+                                        "last_name": document.querySelector('#billing_last_name')?.value,
+                                        "username": username,
+                                        "billing": {
+                                            "first_name": document.querySelector('#billing_first_name')?.value,
+                                            "last_name": document.querySelector('#billing_last_name')?.value,
+                                            "company": document.querySelector('#billing_company')?.value,
+                                            "address_1": document.querySelector('#billing_address_1')?.value,
+                                            "address_2": document.querySelector('#billing_address_2')?.value,
+                                            "city": document.querySelector('#billing_city')?.value,
+                                            "state": document.querySelector('#billing_state')?.value,
+                                            "postcode": document.querySelector('#billing_postcode')?.value,
+                                            "country": document.querySelector('#billing_country')?.value,
+                                            "email": document.querySelector('#billing_email')?.value,
+                                            "phone": document.querySelector('#billing_phone')?.value
+                                        },
+                                        "shipping": {
+                                            "first_name": document.querySelector('#shipping_first_name')?.value ?? document.querySelector('#billing_first_name')?.value,
+                                            "last_name": document.querySelector('#shipping_last_name')?.value ?? document.querySelector('#billing_last_name')?.value,
+                                            "company": document.querySelector('#shipping_company')?.value ?? document.querySelector('#billing_company')?.value,
+                                            "address_1": document.querySelector('#shipping_address_1')?.value ?? document.querySelector('#billing_address_1')?.value,
+                                            "address_2": document.querySelector('#shipping_address_2')?.value ?? document.querySelector('#billing_address_2')?.value,
+                                            "city": document.querySelector('#shipping_city')?.value ?? document.querySelector('#billing_city')?.value,
+                                            "state": document.querySelector('#shipping_state')?.value ?? document.querySelector('#billing_state')?.value,
+                                            "postcode": document.querySelector('#shipping_postcode')?.value ?? document.querySelector('#billing_postcode')?.value,
+                                            "country": document.querySelector('#shipping_country')?.value ?? document.querySelector('#billing_country')?.value,
+                                        }
+                                    })
+                                })
+                                .then( response => response.json() )
+                                .then( result => console.log( result ) )
+
+                            },
+                            selectUser(event) {
+                                if( event.target?.value !== -1 ) {
+                                    const customer = wp_customers.find( user => user.ID==event.target?.value )
+                                    Object.keys( customer.billing ).forEach( key => {
+                                        const field = document.querySelector(`#${key}`)
+                                        if( field ) {
+                                            field.value = customer.billing[key]
+                                        }
+                                    })
+                                    Object.keys( customer.shipping ).forEach( key => {
+                                        const field = document.querySelector(`#${key}`)
+                                        if( field ) {
+                                            field.value = customer.shipping[key]
+                                        }
+                                    })
+                                }
+                            }
+                        }
+                    }).mount('#app-checkout')
+                </script>
+
+            <?php
+        }
     }
 
     public static function wc_price($raw, $price, $options=null) {
@@ -79,6 +221,9 @@ class WooSellerAssistant {
     public static function update_config() {
         if( isset($_POST['wsa_rate_usd']) ) {
             WooSellerAssistant::set_rate_usd( $_POST['wsa_rate_usd'] );
+        }
+        if( isset($_POST['wsa_zoho_books_token']) ) {
+            update_option('wsa_zoho_books_token', $_POST['wsa_zoho_books_token']);
         }
         echo 1;
         die();

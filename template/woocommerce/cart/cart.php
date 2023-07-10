@@ -118,7 +118,6 @@ do_action( 'woocommerce_before_cart' ); ?>
 
 						<td class="product-price" data-title="<?php esc_attr_e( 'Price', 'woocommerce' ); ?>">
 							<span style="display:flex; flex-direction:column; width:80%; gap:5px; align-items:center;">
-								<input type="hidden" name="<?="cart[rate]"?>" value="<?=WooSellerAssistant::get_rate_usd()?>" />
 								<?=input_price(
 									"priceves_".$_product->get_ID(),
 									"cart[{$cart_item_key}][price]",
