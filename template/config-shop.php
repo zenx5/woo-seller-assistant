@@ -5,10 +5,10 @@
     $client_secret = get_option('wsa_zoho_client_secret', '');
     $organization_id = get_option('wsa_zoho_book_organization', '');
     
-    // $code = '1000.86fbc2c71cd24d7633c450171cee04c3.d0fa2475a01c5c52fb1072c7f2441511';
+    // $code = '';
     // $response1 = ZohoApi::generate_code($code);
     // echo json_decode($response1, true)['access_token'];
-    // $response2 = ZohoApi::refresh_token( "1000.f5afb220b9b0afd60af96baf1730a7cd.6514f3b3945e4372fdb2c2226041fcdf" );
+    // $response2 = ZohoApi::refresh_token( "" );
 
 ?>
 <h1>Configuracion de la Tienda</h1>
