@@ -17,6 +17,9 @@
 
 defined( 'ABSPATH' ) || exit;
 
+$current_user = wp_get_current_user();
+$is_seller = in_array('administrator', $current_user->roles) || in_array('shop_manager', $current_user->roles);
+
 function input_price($id, $name, $price, $symbol, $disabled = false) {
 	ob_start();?>
 		<span style="display:flex; flex-direction:row; align-items:center;justify-content: center; gap: 5px;">
@@ -118,11 +121,11 @@ do_action( 'woocommerce_before_cart' ); ?>
 
 						<td class="product-price" data-title="<?php esc_attr_e( 'Price', 'woocommerce' ); ?>">
 							<span style="display:flex; flex-direction:column; width:80%; gap:5px; align-items:center;">
-								<?=input_price(
+								<?= $is_seller ? input_price(
 									"priceves_".$_product->get_ID(),
 									"cart[{$cart_item_key}][price]",
 									$_price,
-									"$")?>
+									"$") : "<span>".wc_price($_price)."</span>"?>
 								<span>
 									<?= wc_price( $_price*WooSellerAssistant::get_rate_usd(), [ "currency" => "VES"] ) ?>
 								</span>

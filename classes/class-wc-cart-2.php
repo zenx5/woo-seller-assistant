@@ -78,23 +78,17 @@ class WC_Cart_Two {
 					$_product = $values['data'];
                     
 					// Skip product if no updated quantity was posted.
-					if ( ! isset( $cart_totals[ $cart_item_key ] ) || ! isset( $cart_totals[ $cart_item_key ]['qty'] ) || ! isset( $cart_totals[ $cart_item_key ]['price'] ) ) {
+					if ( ! isset( $cart_totals[ $cart_item_key ] ) || 
+						(!isset( $cart_totals[ $cart_item_key ]['qty'] ) && !isset( $cart_totals[ $cart_item_key ]['price'] ) )
+					) {
 						continue;
 					}
 
 					// Sanitize.
 					$quantity = apply_filters( 'woocommerce_stock_amount_cart_item', wc_stock_amount( preg_replace( '/[^0-9\.]/', '', $cart_totals[ $cart_item_key ]['qty'] ) ), $cart_item_key );
-                    $price = preg_replace( '/[^0-9\.]/', '', $cart_totals[ $cart_item_key ]['price'] );
+                    $price = isset( $cart_totals[ $cart_item_key ]['price'] ) ? preg_replace( '/[^0-9\.]/', '', $cart_totals[ $cart_item_key ]['price'] ) : $_product->get_price();                   
 
-                    // die(json_encode($values));
-                    // die(json_encode([
-                    //     "quantity" => $quantity,
-                    //     "price" => $price,
-                    //     "values" => $values['quantity']
-                    // ]));
-                    
-
-					if ( '' === $quantity || '' === $price  ) { //|| ($quantity === $values['quantity'])
+					if ( '' === $quantity && '' === $price  ) { 
 						continue;
 					}
 
