@@ -3,15 +3,15 @@
     // $zb_token = get_option('wsa_zoho_books_token', '');
     $client_id = get_option('wsa_zoho_client_id', '');
     $client_secret = get_option('wsa_zoho_client_secret', '');
-    // $user_roles = get_option('wp_user_roles');
-    // $user_roles['shop_manager']['capabilities']['create_users'] = true;
-    // $user_roles['shop_manager']['capabilities']['level_10'] = true;
-    // update_option('wp_user_roles',  $user_roles );
+    $organization_id = get_option('wsa_zoho_book_organization', '');
+    
+    // $code = '';
+    // $response1 = ZohoApi::generate_code($code);
+    // echo json_decode($response1, true)['access_token'];
+    // $response2 = ZohoApi::refresh_token( "" );
+
 ?>
 <h1>Configuracion de la Tienda</h1>
-<script>
-    console.log(<?=json_encode( $user_roles )?>)
-</script>
 <div style="padding:20px 0px">
     <table>
         <tr>
@@ -23,6 +23,16 @@
                     name="wsa_rate_usd"
                     step="0.01"
                     value="<?=$rate?>"/>
+            </td>
+        </tr>
+        <tr>
+            <th style="width:200px;">Organization Id: </th>
+            <td>
+                <input
+                    type="text"
+                    id="wsa_zoho_book_organization"
+                    name="wsa_zoho_book_organization"
+                    value="<?=$organization_id?>"/>
             </td>
         </tr>
         <tr>
@@ -52,13 +62,21 @@
             .querySelector('#save-config')
             .addEventListener('click', async event => {
                 const rate = document.querySelector('#wsa_rate_usd').value
-                const token = document.querySelector('#wsa_zoho_books_token').value
+                const organizationId = document.querySelector('#wsa_zoho_book_organization').value
+                const clientId = document.querySelector('#wsa_zoho_client_id').value
+                const clientSecret = document.querySelector('#wsa_zoho_client_secret').value
                 const response = await fetch(ajaxurl, {
                     method:'post',
                     headers:{
                         'Content-Type':'application/x-www-form-urlencoded'
                     },
-                    body:`action=update_config&wsa_rate_usd=${rate}&wsa_zoho_books_token=${token}`
+                    body:[
+                        `action=update_config`,
+                        `wsa_rate_usd=${rate}`,
+                        `wsa_zoho_book_organization=${organizationId}`,
+                        `wsa_zoho_client_id=${clientId}`,
+                        `wsa_zoho_client_secret=${clientSecret}`
+                    ].join('&')
                 })
                 const result = await response.text();
                 if( result==1 ) document.location.reload();

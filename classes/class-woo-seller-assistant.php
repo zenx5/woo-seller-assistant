@@ -77,7 +77,69 @@ class WooSellerAssistant {
 
     public static function order_to_data_invoice($order) {
         $data = [
-
+            "customer_id" => 982000000567001,            
+            "invoice_number" => "INV-00003",
+            "reference_number" => " ",
+            "date" => "2013-11-17",
+                "payment_terms" => 15,
+                "payment_terms_label" => "Net 15",
+            "due_date" => "2013-12-03",
+            "discount" => 0,
+            "line_items" => [
+                [
+                    "item_id" => 982000000030049,
+                    "product_type" => "goods",
+                    "name"  => "Hard Drive",
+                    "description"   => "500GB, USB 2.0 interface 1400 rpm, protective hard case.",
+                    // "item_order"    => 1,
+                    // "bcy_rate"  => 120,
+                    // "rate"  => 120,
+                    "quantity"  => 1,
+                    "unit"  => "Kgs",
+                    // "discount_amount"   => 0,
+                    "discount"  => 0,
+                    // "tags" => [
+                    //     [
+                    //         "tag_id" => 982000000009070,
+                    //         "tag_option_id" => 982000000002670
+                    //     ]
+                    // ],
+                    // "tax_id" => 982000000557028,
+                    // "tds_tax_id" => "982000000557012",
+                    // "tax_name" => "VAT",
+                    // "tax_type" => "tax",
+                    // "tax_percentage" => 12.5,
+                    // "tax_treatment_code" => "uae_others",
+                    // "header_name" => "Electronic devices"
+                ]
+            ],
+            // "payment_options" => [
+            //     "payment_gateways" => [
+            //         [
+            //             "configured" => true,
+            //             "additional_field1" => "standard",
+            //             "gateway_name" => "paypal"
+            //         ]
+            //     ]
+            // ],
+            // "allow_partial_payments" => true,
+            // "custom_body" => " ",
+            // "custom_subject" => " ",
+            // "notes" => "Looking forward for your business.",
+            // "terms" => "Terms & Conditions apply",
+            // "shipping_charge" => 0,
+            // "adjustment" => 0,
+            // "adjustment_description" => " ",
+            // "reason" => " ",
+            // "tax_authority_id" => 11149000000061052,
+            // "tax_exemption_id" => 11149000000061054,
+            // "avatax_use_code" => "string",
+            // "avatax_exempt_no" => "string",
+            // "tax_id" => 982000000557028,
+            // "expense_id" => " ",
+            // "salesorder_item_id" => " ",
+            // "avatax_tax_code" => "string",
+            // "time_entry_ids" => []
         ];
 
         ZohoBooks::create_invoice($data);
@@ -235,6 +297,15 @@ class WooSellerAssistant {
         }
         if( isset($_POST['wsa_zoho_books_token']) ) {
             update_option('wsa_zoho_books_token', $_POST['wsa_zoho_books_token']);
+        }
+        if( isset($_POST['wsa_zoho_book_organization']) ) {
+            update_option('wsa_zoho_book_organization', $_POST['wsa_zoho_book_organization']);
+        }
+        if( isset($_POST['wsa_zoho_client_id']) ) {
+            update_option('wsa_zoho_client_id', $_POST['wsa_zoho_client_id']);
+        }
+        if( isset($_POST['wsa_zoho_client_secret']) ) {
+            update_option('wsa_zoho_client_secret', $_POST['wsa_zoho_client_secret']);
         }
         echo 1;
         die();
