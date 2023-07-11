@@ -69,9 +69,10 @@ foreach( $_users as $_user ) {
 <?php if( $is_seller ): ?>
 	<script>
 		const wp_customers = <?=json_encode( $users )?>;
+		console.log(wp_customers)
 	</script>
 <?php endif;?>
-<div <?php $is_seller ? 'id="app-checkout"' : '' ?> >
+<div <?= $is_seller ? 'id="app-checkout"' : '' ?> >
 	<?php if( $is_seller ): ?>
 		<label class="woocommerce-form__label">
 			<b>Cliente</b>

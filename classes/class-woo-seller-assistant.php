@@ -18,6 +18,8 @@ class WooSellerAssistant {
         update_option('wsa_zoho_refresh_token', '');
         update_option('wsa_zoho_refresh_token_time', '');
         update_option('wsa_zoho_token_error', '0');
+        update_option('wsa_woo_public_client', '');
+        update_option('wsa_woo_private_client', '');
     }
 
     public static function deactivation() {
@@ -184,23 +186,23 @@ class WooSellerAssistant {
 
     public static function js_footer() {
         if( true ){
+            $public_client = get_option('wsa_woo_public_client','');
+            $private_client = get_option('wsa_woo_private_client','');
+            $token = "Basic ".base64_encode("$public_client:$private_client");
             ?>
                 <script>
                     const { createApp } = Vue
-
+                    console.log('js_footer')
                     createApp({
                         data(){
                             return {
-                                client:-1,
-                                message:'Hello'
+                                client:-1
                             }
                         },
                         methods: {
                             createUser(){
-                                const public_client = 'ck_ef8fa4043a81838fc7d923b0a0e1dd08a82d2d41';
-                                const private_client = 'cs_0c61d7175a180e0fa12fa53ca2edcc142115d99c';
                                 const headers = new Headers()
-                                headers.set('Authorization', 'Basic ' +btoa(`${public_client}:${private_client}`))
+                                headers.set('Authorization', "<?=$token?>")
                                 headers.set('Content-Type', 'application/json')
                                 const username = document.querySelector('#username')?.value
                                 if( username === '' ) {
@@ -246,18 +248,28 @@ class WooSellerAssistant {
 
                             },
                             selectUser(event) {
+                                console.log( 'select user' )
                                 if( event.target?.value !== -1 ) {
                                     const customer = wp_customers.find( user => user.ID==event.target?.value )
+                                    console.log( customer )
                                     Object.keys( customer.billing ).forEach( key => {
                                         const field = document.querySelector(`#${key}`)
                                         if( field ) {
-                                            field.value = customer.billing[key]
+                                            const item = jQuery(`#${key}`)
+                                            item.val( customer.billing[key] )
+                                            if( item.is('select') ) {
+                                                item.change()
+                                            }
                                         }
                                     })
                                     Object.keys( customer.shipping ).forEach( key => {
                                         const field = document.querySelector(`#${key}`)
                                         if( field ) {
-                                            field.value = customer.shipping[key]
+                                            const item = jQuery(`#${key}`)
+                                            item.val( customer.shipping[key] )
+                                            if( item.is('select') ) {
+                                                item.change()
+                                            }
                                         }
                                     })
                                 }
@@ -335,6 +347,12 @@ class WooSellerAssistant {
         }
         if( isset($_POST['wsa_zoho_client_secret']) ) {
             update_option('wsa_zoho_client_secret', $_POST['wsa_zoho_client_secret']);
+        }
+        if( isset($_POST['wsa_woo_public_client']) ) {
+            update_option('wsa_woo_public_client', $_POST['wsa_woo_public_client']);
+        }
+        if( isset($_POST['wsa_woo_private_client']) ) {
+            update_option('wsa_woo_private_client', $_POST['wsa_woo_private_client']);
         }
         echo 1;
         die();

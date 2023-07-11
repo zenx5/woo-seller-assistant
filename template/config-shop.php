@@ -7,6 +7,8 @@
     $organization_id = get_option('wsa_zoho_book_organization', '');
     $access_token = get_option( 'wsa_zoho_access_token', '' );
     $refresh_token = get_option( 'wsa_zoho_refresh_token', '' );
+    $woo_public_client = get_option('wsa_woo_public_client', '');
+    $woo_private_client = get_option('wsa_woo_private_client', '');
     if($access_token!='') {
         // echo "Token: $refresh_token <br/>";
         // echo json_encode( ZohoBooks::list_all_invoices() );
@@ -46,8 +48,8 @@
 
 <ul class="nav-container">
     <li class="nav-item <?=$tab==1?'active':''?>" data-tab="1">Bodega</li>
-    <li class="nav-item <?=$tab==2?'active':''?>" data-tab="2">Zoho Credenciales</li>
-    <li class="nav-item <?=$tab==3?'active':''?>" data-tab="3">Zoho Credenciales</li>
+    <li class="nav-item <?=$tab==2?'active':''?>" data-tab="2">Credenciales de Zoho</li>
+    <li class="nav-item <?=$tab==3?'active':''?>" data-tab="3">Credenciales de WooCommerce</li>
 </ul>
 <?php for($i=1; $i<=3; $i++): ?>
     <div id="tab-<?=$i?>" class="tab-content <?=$tab==$i?'active':''?>">
@@ -71,6 +73,8 @@
             const organizationId = document.querySelector('#wsa_zoho_book_organization').value
             const clientId = document.querySelector('#wsa_zoho_client_id').value
             const clientSecret = document.querySelector('#wsa_zoho_client_secret').value
+            const wooPublicClient = document.querySelector('#wsa_woo_public_client').value
+            const wooPrivateClient = document.querySelector('#wsa_woo_private_client').value
             const response = await fetch(ajaxurl, {
                 method:'post',
                 headers:{
@@ -81,7 +85,9 @@
                     `wsa_rate_usd=${rate}`,
                     `wsa_zoho_book_organization=${organizationId}`,
                     `wsa_zoho_client_id=${clientId}`,
-                    `wsa_zoho_client_secret=${clientSecret}`
+                    `wsa_zoho_client_secret=${clientSecret}`,
+                    `wsa_woo_public_client=${wooPublicClient}`,
+                    `wsa_woo_private_client=${wooPrivateClient}`
                 ].join('&')
             })
             const result = await response.text();
