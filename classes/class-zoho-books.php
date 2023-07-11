@@ -4,7 +4,7 @@ include 'class-zoho-api.php';
 
 class ZohoBooks extends ZohoApi {
 
-
+    private static $baseurl = "https://www.zohoapis.com/books/v3/";
 
     public static function create_invoice($data = []) {
         return [];
@@ -26,19 +26,23 @@ class ZohoBooks extends ZohoApi {
         return $response;
     }
 
-    public static function list_all_invoices() {
-        $organization_id = get_option('wsa_zoho_book_organization', '');
-        $refresh_token = get_option('wsa_zoho_refresh_token', '');
-        $access_token = get_option('wsa_zoho_access_token', '');
-        $client_id = get_option('wsa_zoho_client_id', '');
-        $client_secret = get_option('wsa_zoho_client_secret', '');
+    public static function list_all_items() {
+        return self::get_single_resource('items');        
+    }
 
+    public static function list_all_invoices() {
+        return self::get_single_resource('invoices');        
+    }
+
+    public static function get_single_resource($resource) {
+        $organization_id = get_option('wsa_zoho_book_organization', '');
         $response = self::get_token();
         if( $response["error"]==1 ) return [];
+        $access_token = $response["access_token"];
 
-        $url = "https://www.zohoapis.com/books/v3/invoices?organization_id=$organization_id";
+        $url = self::$baseurl."$resource?organization_id=$organization_id";
         $headers = [
-            'Authorization:  Zoho-oauthtoken '.$response["access_token"]
+            'Authorization:  Zoho-oauthtoken '.$access_token
         ];
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
@@ -47,8 +51,7 @@ class ZohoBooks extends ZohoApi {
         $response = json_decode( curl_exec($ch), true );
         curl_close($ch);
 
-        return ( $response['code']==0 ) ? $response['invoices'] : [];
-        
+        return ( $response['code']==0 ) ? $response[$resource] : [];
     }
 
 }
