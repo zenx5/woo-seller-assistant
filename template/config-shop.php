@@ -12,9 +12,9 @@
     if($access_token!='') {
         // echo "Token: $refresh_token <br/>";
         // echo json_encode( ZohoBooks::list_all_invoices() );
-        echo "Token active";
+        echo "<div style='display:inline-block; font-weight:bold;top:10px; padding:4px; color:white; background-color:green; margin:5px; border-radius:10px;'>active</div>";
     } else {
-        echo "Token empty";
+        echo "<div style='display:inline-block; font-weight:bold;top:10px; padding:4px; color:white; background-color:red; margin:5px; border-radius:10px;'>inactive</div>";
     }
     
 ?>
@@ -48,8 +48,8 @@
 
 <ul class="nav-container">
     <li class="nav-item <?=$tab==1?'active':''?>" data-tab="1">Bodega</li>
-    <li class="nav-item <?=$tab==2?'active':''?>" data-tab="2">Credenciales de Zoho</li>
-    <li class="nav-item <?=$tab==3?'active':''?>" data-tab="3">Credenciales de WooCommerce</li>
+    <li class="nav-item <?=$tab==2?'active':''?>" data-tab="2">Zoho</li>
+    <li class="nav-item <?=$tab==3?'active':''?>" data-tab="3">WooCommerce</li>
     <li class="nav-item <?=$tab==4?'active':''?>" data-tab="4">Facturas</li>
 </ul>
 <?php for($i=1; $i<=4; $i++): ?>
@@ -68,6 +68,9 @@
     })
 </script>
 <script>
+    jQuery('#btn-import-from-zoho').click(function(){
+        console.log('import')
+    })
     jQuery('.save-config')
         .click(async event => {
             const rate = document.querySelector('#wsa_rate_usd').value
