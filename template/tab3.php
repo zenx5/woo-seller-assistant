@@ -20,6 +20,8 @@
                     value="<?=$woo_private_client?>"/>
             </td>
         </tr>
+        
     </table>
     <button type="button" style="margin-top:20px; padding:5px 20px;" class="save-config button">Guardar</button>
+    <button  id="btn-import-from-zoho" style="margin-top:20px; padding:5px 20px;" class="button">Importar Productos</button>
 </div>
