@@ -14,6 +14,10 @@ class WooSellerAssistant {
         $user_roles = get_option('wp_user_roles');
         $user_roles['shop_manager']['capabilities']['create_users'] = true;
         update_option('wp_user_roles',  $user_roles );
+        update_option('wsa_zoho_access_token', '');
+        update_option('wsa_zoho_refresh_token', '');
+        update_option('wsa_zoho_refresh_token_time', '');
+        update_option('wsa_zoho_token_error', '0');
     }
 
     public static function deactivation() {
@@ -24,6 +28,7 @@ class WooSellerAssistant {
         add_filter( 'woocommerce_locate_template', [__CLASS__, 'template_replace'],1,3);
         add_action( 'admin_menu', [__CLASS__, 'admin_menu']);
         add_action( 'wp_ajax_update_config', [__CLASS__, 'update_config']);
+        add_action( 'wp_ajax_generate_code', [__CLASS__, 'generate_code']);
         remove_action( 'wp_loaded', array( 'WC_Form_Handler', 'update_cart_action' ), 20 );
         add_action( 'wp_loaded', array( 'WC_Cart_Two', 'update_cart_action' ), 20 );
         add_filter( 'wsa_price_in_cart', [__CLASS__, 'get_price_in_cart'],1,3);
@@ -34,6 +39,30 @@ class WooSellerAssistant {
         add_action( 'save_post', [__CLASS__, 'update_custom_field']);
         add_filter( 'manage_edit-shop_order_columns', [__CLASS__, 'add_column_list_shop_order']);
         add_action( 'manage_posts_custom_column',  [__CLASS__, 'column_shop_order_content']);
+    }
+
+    public static function generate_code() {
+        if( isset($_POST['code']) ) {
+            $code = $_POST['code'];
+            $client_id = get_option('wsa_zoho_client_id', '');
+            $client_secret = get_option('wsa_zoho_client_secret', '');
+            $refresh_token = ZohoBooks::generate_code( $code, $client_id, $client_secret );
+            if( !$refresh_token ) {
+                update_option('wsa_zoho_token_error', '1');
+                die('0');
+            }
+            update_option( 'wsa_zoho_refresh_token', $refresh_token );
+            $access_token = ZohoBooks::refresh_token( $refresh_token, $client_id, $client_secret );
+            if( !$access_token ) {
+                update_option('wsa_zoho_token_error', '1');
+                die('0');
+            }
+            update_option( 'wsa_zoho_access_token', $access_token );
+            update_option( 'wsa_zoho_access_token_time', date('Y-m-d H:i:s') );
+            update_option('wsa_zoho_token_error', '0');
+            echo "Aprobado este codigo $code <br/> generado refresh token $access_token";
+            die();
+        }
     }
 
     public static function column_shop_order_content($column) {
