@@ -50,8 +50,9 @@
     <li class="nav-item <?=$tab==1?'active':''?>" data-tab="1">Bodega</li>
     <li class="nav-item <?=$tab==2?'active':''?>" data-tab="2">Credenciales de Zoho</li>
     <li class="nav-item <?=$tab==3?'active':''?>" data-tab="3">Credenciales de WooCommerce</li>
+    <li class="nav-item <?=$tab==4?'active':''?>" data-tab="4">Facturas</li>
 </ul>
-<?php for($i=1; $i<=3; $i++): ?>
+<?php for($i=1; $i<=4; $i++): ?>
     <div id="tab-<?=$i?>" class="tab-content <?=$tab==$i?'active':''?>">
         <?php include 'tab'.$i.'.php'; ?>
     </div>
