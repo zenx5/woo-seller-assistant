@@ -45,7 +45,6 @@
 
 </style>
 <h1>Configuracion</h1>
-
 <ul class="nav-container">
     <li class="nav-item <?=$tab==1?'active':''?>" data-tab="1">Bodega</li>
     <li class="nav-item <?=$tab==2?'active':''?>" data-tab="2">Zoho</li>
@@ -68,8 +67,16 @@
     })
 </script>
 <script>
-    jQuery('#btn-import-from-zoho').click(function(){
+    jQuery('#btn-import-from-zoho').click(async function(){
         console.log('import')
+        const response = await fetch(ajaxurl, {
+            method:'post',
+            headers:{
+                'Content-Type':'application/x-www-form-urlencoded'
+            },
+            body:`action=import_products`,
+        })
+        console.log( await response.json() );
     })
     jQuery('.save-config')
         .click(async event => {

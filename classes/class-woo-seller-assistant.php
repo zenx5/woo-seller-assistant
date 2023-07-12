@@ -31,6 +31,7 @@ class WooSellerAssistant {
         add_action( 'admin_menu', [__CLASS__, 'admin_menu']);
         add_action( 'wp_ajax_update_config', [__CLASS__, 'update_config']);
         add_action( 'wp_ajax_generate_code', [__CLASS__, 'generate_code']);
+        add_action( 'wp_ajax_import_products', [__CLASS__, 'import_products']);
         remove_action( 'wp_loaded', array( 'WC_Form_Handler', 'update_cart_action' ), 20 );
         add_action( 'wp_loaded', array( 'WC_Cart_Two', 'update_cart_action' ), 20 );
         add_filter( 'wsa_price_in_cart', [__CLASS__, 'get_price_in_cart'],1,3);
@@ -41,6 +42,52 @@ class WooSellerAssistant {
         add_action( 'save_post', [__CLASS__, 'update_custom_field']);
         add_filter( 'manage_edit-shop_order_columns', [__CLASS__, 'add_column_list_shop_order']);
         add_action( 'manage_posts_custom_column',  [__CLASS__, 'column_shop_order_content']);
+    }
+
+    public static function import_products() {
+        $response = [
+            "new" => [],
+            "update" => [],
+            "log" => []
+        ];
+        $items = ZohoBooks::list_all_items();
+        foreach( $items as $item ) {
+            if( $item['product_type']=='goods' && $item['status']=='active' ) {
+                $sku = ($item['sku']!='') ? $item['sku'] : 'sku-'.$item['account_id'].'-'.$item['item_id'];
+                $product_id = wc_get_product_id_by_sku($sku);
+                $response["log"][] = "Product ID: $product_id";
+                if( $product_id ) {
+                    $image_document_id = $item['image_document_id'];
+                    $organization_id = get_option('wsa_zoho_book_organization', '');
+                    $url_image = "https://books.zoho.com/api/v3/documents/$image_document_id?organization_id=$organization_id&inline=true";
+                    $product = new WC_Product( $product_id );
+                    $response["log"][] = "Price compare: ".$product->get_regular_price()."!=".$item['rate']."?";
+                    $response["log"][] = "Name compare: ".$product->get_name()."!=".$item['name']."?";
+                    if( $product->get_regular_price()!=$item['rate'] || $product->get_name()!=$item['name'] ) {
+                        $product->set_regular_price( $item['rate'] );
+                        $product->set_name( $item['name'] );
+                        $product->set_image_id( $url_image );
+                        $id = $product->save();
+                        $response["log"][] = "Result save: $id";
+                        $response["update"][] = $item;
+                    }
+                } else {
+                    $image_document_id = $item['image_document_id'];
+                    $organization_id = get_option('wsa_zoho_book_organization', '');
+                    $url_image = "https://books.zoho.com/api/v3/documents/$image_document_id?organization_id=$organization_id&inline=true";
+                    $product = new WC_Product();
+                    $product->set_regular_price( $item['rate'] );
+                    $product->set_name( $item['name'] );
+                    $product->set_sku( $sku );
+                    $product->set_image_id( $url_image );
+                    $id = $product->save();
+                    $response["log"][] = "Result save: $id";
+                    $response["new"][] = $item;
+                }
+            }
+        }
+        echo json_encode( $response );
+        die();
     }
 
     public static function generate_code() {
@@ -177,7 +224,7 @@ class WooSellerAssistant {
     }
 
     public static function js_head() {
-        if( true ){
+        if( is_checkout() ){
             ?>
                 <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
             <?php
@@ -185,100 +232,8 @@ class WooSellerAssistant {
     }
 
     public static function js_footer() {
-        if( true ){
-            $public_client = get_option('wsa_woo_public_client','');
-            $private_client = get_option('wsa_woo_private_client','');
-            $token = "Basic ".base64_encode("$public_client:$private_client");
-            ?>
-                <script>
-                    const { createApp } = Vue
-                    console.log('js_footer')
-                    createApp({
-                        data(){
-                            return {
-                                client:-1
-                            }
-                        },
-                        methods: {
-                            createUser(){
-                                const headers = new Headers()
-                                headers.set('Authorization', "<?=$token?>")
-                                headers.set('Content-Type', 'application/json')
-                                const username = document.querySelector('#username')?.value
-                                if( username === '' ) {
-                                    alert('Defina el username');
-                                    return
-                                }
-                                fetch('https://wp.test/wp-json/wc/v3/customers', {
-                                    method:'post',
-                                    headers: headers,
-                                    body:JSON.stringify({
-                                        "email": document.querySelector('#billing_email')?.value,
-                                        "first_name": document.querySelector('#billing_first_name')?.value,
-                                        "last_name": document.querySelector('#billing_last_name')?.value,
-                                        "username": username,
-                                        "billing": {
-                                            "first_name": document.querySelector('#billing_first_name')?.value,
-                                            "last_name": document.querySelector('#billing_last_name')?.value,
-                                            "company": document.querySelector('#billing_company')?.value,
-                                            "address_1": document.querySelector('#billing_address_1')?.value,
-                                            "address_2": document.querySelector('#billing_address_2')?.value,
-                                            "city": document.querySelector('#billing_city')?.value,
-                                            "state": document.querySelector('#billing_state')?.value,
-                                            "postcode": document.querySelector('#billing_postcode')?.value,
-                                            "country": document.querySelector('#billing_country')?.value,
-                                            "email": document.querySelector('#billing_email')?.value,
-                                            "phone": document.querySelector('#billing_phone')?.value
-                                        },
-                                        "shipping": {
-                                            "first_name": document.querySelector('#shipping_first_name')?.value ?? document.querySelector('#billing_first_name')?.value,
-                                            "last_name": document.querySelector('#shipping_last_name')?.value ?? document.querySelector('#billing_last_name')?.value,
-                                            "company": document.querySelector('#shipping_company')?.value ?? document.querySelector('#billing_company')?.value,
-                                            "address_1": document.querySelector('#shipping_address_1')?.value ?? document.querySelector('#billing_address_1')?.value,
-                                            "address_2": document.querySelector('#shipping_address_2')?.value ?? document.querySelector('#billing_address_2')?.value,
-                                            "city": document.querySelector('#shipping_city')?.value ?? document.querySelector('#billing_city')?.value,
-                                            "state": document.querySelector('#shipping_state')?.value ?? document.querySelector('#billing_state')?.value,
-                                            "postcode": document.querySelector('#shipping_postcode')?.value ?? document.querySelector('#billing_postcode')?.value,
-                                            "country": document.querySelector('#shipping_country')?.value ?? document.querySelector('#billing_country')?.value,
-                                        }
-                                    })
-                                })
-                                .then( response => response.json() )
-                                .then( result => console.log( result ) )
-
-                            },
-                            selectUser(event) {
-                                console.log( 'select user' )
-                                if( event.target?.value !== -1 ) {
-                                    const customer = wp_customers.find( user => user.ID==event.target?.value )
-                                    console.log( customer )
-                                    Object.keys( customer.billing ).forEach( key => {
-                                        const field = document.querySelector(`#${key}`)
-                                        if( field ) {
-                                            const item = jQuery(`#${key}`)
-                                            item.val( customer.billing[key] )
-                                            if( item.is('select') ) {
-                                                item.change()
-                                            }
-                                        }
-                                    })
-                                    Object.keys( customer.shipping ).forEach( key => {
-                                        const field = document.querySelector(`#${key}`)
-                                        if( field ) {
-                                            const item = jQuery(`#${key}`)
-                                            item.val( customer.shipping[key] )
-                                            if( item.is('select') ) {
-                                                item.change()
-                                            }
-                                        }
-                                    })
-                                }
-                            }
-                        }
-                    }).mount('#app-checkout')
-                </script>
-
-            <?php
+        if( is_checkout() ){
+            include WP_PLUGIN_DIR.'/woo-seller-assistant/template/assets/js_checkout_app.php';
         }
     }
 
@@ -370,7 +325,7 @@ class WooSellerAssistant {
         );
 
         function config_shop_html() {
-            include_once WP_PLUGIN_DIR.'/woo-seller-assistant/template/config-shop.php';
+            include_once WP_PLUGIN_DIR.'/woo-seller-assistant/template/admin/config-shop.php';
         }
     }
 
