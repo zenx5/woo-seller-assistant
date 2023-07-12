@@ -68,6 +68,21 @@ class WooSellerAssistant {
                         "show_admin_bar_front" => false,
                         "role" => "customer"
                     ]);
+                    update_post_meta(
+                        $user_id,
+                        '_book_cf_dni',
+                        $contact['cf_dni']
+                    );
+                    update_post_meta(
+                        $user_id,
+                        '_book_referido_por',
+                        $item['referido_por']
+                    );
+                    update_post_meta(
+                        $user_id,
+                        '_book_contact_id',
+                        $item['contact_id']
+                    );
                     $response["new"][] = $user_id;
                     $response["log"][] = "User create with ID $user_id";
                 } else {
@@ -84,6 +99,21 @@ class WooSellerAssistant {
                         "show_admin_bar_front" => false,
                         "role" => "customer"
                     ]);
+                    update_post_meta(
+                        $user_id,
+                        '_book_cf_dni',
+                        $contact['cf_dni']
+                    );
+                    update_post_meta(
+                        $user_id,
+                        '_book_referido_por',
+                        $item['referido_por']
+                    );
+                    update_post_meta(
+                        $user_id,
+                        '_book_contact_id',
+                        $item['contact_id']
+                    );
                     $response["update"][] = $user_id;
                     $response["log"][] = "User update with ID $user_id";
                 }
@@ -117,6 +147,21 @@ class WooSellerAssistant {
                         $product->set_name( $item['name'] );
                         $product->set_image_id( $url_image );
                         $id = $product->save();
+                        update_post_meta(
+                            $id,
+                            '_book_item_id',
+                            $item['item_id']
+                        );
+                        update_post_meta(
+                            $id,
+                            '_book_account_id',
+                            $item['account_id']
+                        );
+                        update_post_meta(
+                            $id,
+                            '_book_account_name',
+                            $item['account_name']
+                        );
                         $response["log"][] = "Result save: $id";
                         $response["update"][] = $item;
                     }
@@ -130,12 +175,27 @@ class WooSellerAssistant {
                     $product->set_sku( $sku );
                     $product->set_image_id( $url_image );
                     $id = $product->save();
+                    update_post_meta(
+                        $id,
+                        '_book_item_id',
+                        $item['item_id']
+                    );
+                    update_post_meta(
+                        $id,
+                        '_book_account_id',
+                        $item['account_id']
+                    );
+                    update_post_meta(
+                        $id,
+                        '_book_account_name',
+                        $item['account_name']
+                    );
                     $response["log"][] = "Result save: $id";
                     $response["new"][] = $item;
                 }
             }
         }
-        echo json_encode( $response );
+        echo json_encode( $items[0] );
         die();
     }
 
@@ -199,7 +259,7 @@ class WooSellerAssistant {
             WooSellerAssistant::get_rate_usd()
         );
         // crear factura en Books
-        //self::order_to_invoice( $order );
+        self::order_to_invoice( $order );
     }
 
     public static function order_to_data_invoice($order) {

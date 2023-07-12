@@ -9,10 +9,23 @@
         createApp({
             data(){
                 return {
-                    client:-1
+                    customers: wp_customers,
+                    client:-1,
+                    search:'',
+                }
+            },
+            computed: {
+                customersFiltered: function() {
+                    return this.customers.filter( customer => {
+                        if( this.search==="" ) return true;
+                        return customer.data.display_name.includes( this.search )
+                    })
                 }
             },
             methods: {
+                searchUser(){
+                    console.log( this.search )
+                },
                 createUser(){
                     const headers = new Headers()
                     headers.set('Authorization', "<?=$token?>")
