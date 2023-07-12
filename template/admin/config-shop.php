@@ -67,14 +67,14 @@
     })
 </script>
 <script>
-    jQuery('#btn-import-from-zoho').click(async function(){
-        console.log('import')
+    jQuery('.btn-import-from-zoho').click(async function(){
+        const action = jQuery(this).data('action')
         const response = await fetch(ajaxurl, {
             method:'post',
             headers:{
                 'Content-Type':'application/x-www-form-urlencoded'
             },
-            body:`action=import_products`,
+            body:`action=${action}`,
         })
         console.log( await response.json() );
     })

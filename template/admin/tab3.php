@@ -23,5 +23,6 @@
         
     </table>
     <button type="button" style="margin-top:20px; padding:5px 20px;" class="save-config button">Guardar</button>
-    <button  id="btn-import-from-zoho" style="margin-top:20px; padding:5px 20px;" class="button">Importar Productos</button>
+    <button style="margin-top:20px; padding:5px 20px;" class="button btn-import-from-zoho" data-action="import_products">Importar Productos</button>
+    <button style="margin-top:20px; padding:5px 20px;" class="button btn-import-from-zoho" data-action="import_customers">Importar Clientes</button>
 </div>
