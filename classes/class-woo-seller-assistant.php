@@ -31,6 +31,7 @@ class WooSellerAssistant {
         add_action( 'admin_menu', [__CLASS__, 'admin_menu']);
         add_action( 'wp_ajax_update_config', [__CLASS__, 'update_config']);
         add_action( 'wp_ajax_generate_code', [__CLASS__, 'generate_code']);
+        add_action( 'wp_ajax_import_products', [__CLASS__, 'import_products']);
         remove_action( 'wp_loaded', array( 'WC_Form_Handler', 'update_cart_action' ), 20 );
         add_action( 'wp_loaded', array( 'WC_Cart_Two', 'update_cart_action' ), 20 );
         add_filter( 'wsa_price_in_cart', [__CLASS__, 'get_price_in_cart'],1,3);
@@ -41,6 +42,52 @@ class WooSellerAssistant {
         add_action( 'save_post', [__CLASS__, 'update_custom_field']);
         add_filter( 'manage_edit-shop_order_columns', [__CLASS__, 'add_column_list_shop_order']);
         add_action( 'manage_posts_custom_column',  [__CLASS__, 'column_shop_order_content']);
+    }
+
+    public static function import_products() {
+        $response = [
+            "new" => [],
+            "update" => [],
+            "log" => []
+        ];
+        $items = ZohoBooks::list_all_items();
+        foreach( $items as $item ) {
+            if( $item['product_type']=='goods' && $item['status']=='active' ) {
+                $sku = ($item['sku']!='') ? $item['sku'] : 'sku-'.$item['account_id'].'-'.$item['item_id'];
+                $product_id = wc_get_product_id_by_sku($sku);
+                $response["log"][] = "Product ID: $product_id";
+                if( $product_id ) {
+                    $image_document_id = $item['image_document_id'];
+                    $organization_id = get_option('wsa_zoho_book_organization', '');
+                    $url_image = "https://books.zoho.com/api/v3/documents/$image_document_id?organization_id=$organization_id&inline=true";
+                    $product = new WC_Product( $product_id );
+                    $response["log"][] = "Price compare: ".$product->get_regular_price()."!=".$item['rate']."?";
+                    $response["log"][] = "Name compare: ".$product->get_name()."!=".$item['name']."?";
+                    if( $product->get_regular_price()!=$item['rate'] || $product->get_name()!=$item['name'] ) {
+                        $product->set_regular_price( $item['rate'] );
+                        $product->set_name( $item['name'] );
+                        $product->set_image_id( $url_image );
+                        $id = $product->save();
+                        $response["log"][] = "Result save: $id";
+                        $response["update"][] = $item;
+                    }
+                } else {
+                    $image_document_id = $item['image_document_id'];
+                    $organization_id = get_option('wsa_zoho_book_organization', '');
+                    $url_image = "https://books.zoho.com/api/v3/documents/$image_document_id?organization_id=$organization_id&inline=true";
+                    $product = new WC_Product();
+                    $product->set_regular_price( $item['rate'] );
+                    $product->set_name( $item['name'] );
+                    $product->set_sku( $sku );
+                    $product->set_image_id( $url_image );
+                    $id = $product->save();
+                    $response["log"][] = "Result save: $id";
+                    $response["new"][] = $item;
+                }
+            }
+        }
+        echo json_encode( $response );
+        die();
     }
 
     public static function generate_code() {
