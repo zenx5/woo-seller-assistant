@@ -74,15 +74,23 @@ foreach( $_users as $_user ) {
 <?php endif;?>
 <div <?= $is_seller ? 'id="app-checkout"' : '' ?> >
 	<?php if( $is_seller ): ?>
-		<label class="woocommerce-form__label">
-			<b>Cliente</b>
-			<select style="width:100%" v-model="client" v-on:change="selectUser">
-				<option value="-1">Nuevo Usuario</option>
-				<?php foreach($users as $user): ?>
-					<option value="<?=$user["data"]["ID"]?>"><?=$user["data"]["user_login"]?></option>
-				<?php endforeach;?>
-			</select>
-		</label>
+		<div style="display:flex; flex-direction:row; gap:5px;">
+			<label class="woocommerce-form__label" style="width:50%;">
+				<b>Cliente</b>
+				<select style="width:100%" v-model="client" v-on:change="selectUser">
+					<option value="-1">Nuevo Usuario</option>
+					<option v-for="customer in customersFiltered " value="curstomer.data.ID">{{customer.data.display_name}}</option>
+					<!-- <?php foreach($users as $user): ?>
+						<option value="<?=$user["data"]["ID"]?>"><?=$user["data"]["user_login"]?></option>
+					<?php endforeach;?> -->
+				</select>
+			</label>
+			<label class="woocommerce-form__label" style="width:50%;">
+				<b>Buscar</b>
+				<input type="text" placeholder="Buscar..." style="width:100%" v-model="search" v-on:keyup="searchUser" />
+			</label>
+		</div>
+		
 		<div v-if="client==-1" style="margin-top:10px; display:flex; flex-direction:row; justify-content:space-between;">
 			<button type="button" v-on:click="createUser">Crear Usuario</button>
 			<input type="text" id="username" name="username" placeholder="Username" />

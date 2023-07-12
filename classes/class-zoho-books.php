@@ -26,12 +26,16 @@ class ZohoBooks extends ZohoApi {
         return $response;
     }
 
+    public static function list_all_contacts() {
+        return self::get_single_resource('contacts');
+    }
+
     public static function list_all_items() {
-        return self::get_single_resource('items');        
+        return self::get_single_resource('items');
     }
 
     public static function list_all_invoices() {
-        return self::get_single_resource('invoices');        
+        return self::get_single_resource('invoices');
     }
 
     public static function get_single_resource($resource) {

@@ -1,8 +1,5 @@
 <?php 
     $invoices = ZohoBooks::list_all_invoices();
-    $items = ZohoBooks::list_all_items();
-
-    echo json_encode($items);
 ?>
 <div>
     <ul>

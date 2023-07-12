@@ -32,6 +32,7 @@ class WooSellerAssistant {
         add_action( 'wp_ajax_update_config', [__CLASS__, 'update_config']);
         add_action( 'wp_ajax_generate_code', [__CLASS__, 'generate_code']);
         add_action( 'wp_ajax_import_products', [__CLASS__, 'import_products']);
+        add_action( 'wp_ajax_import_customers', [__CLASS__, 'import_customers']);        
         remove_action( 'wp_loaded', array( 'WC_Form_Handler', 'update_cart_action' ), 20 );
         add_action( 'wp_loaded', array( 'WC_Cart_Two', 'update_cart_action' ), 20 );
         add_filter( 'wsa_price_in_cart', [__CLASS__, 'get_price_in_cart'],1,3);
@@ -42,6 +43,84 @@ class WooSellerAssistant {
         add_action( 'save_post', [__CLASS__, 'update_custom_field']);
         add_filter( 'manage_edit-shop_order_columns', [__CLASS__, 'add_column_list_shop_order']);
         add_action( 'manage_posts_custom_column',  [__CLASS__, 'column_shop_order_content']);
+    }
+
+    public static function import_customers() {
+        $response = [
+            "new" => [],
+            "update" => [],
+            "log" => []
+        ];
+        $contacts = ZohoBooks::list_all_contacts();
+        foreach( $contacts as $contact ) {
+            if( $contact['contact_type']=='customer' ) {
+                $user = get_user_by( 'email', $contact['email'] );
+                if ( !$user ) {
+                    $username = explode('@', $contact['email'])[0];
+                    $user_id = wp_insert_user([
+                        "user_pass" => $username,
+                        "user_login" => $username,
+                        "user_email" => $contact['email'],
+                        "first_name" => $contact['first_name'],
+                        "last_name" => $contact['last_name'],
+                        "user_nicename" => $contact['first_name']."-".$contact['last_name'],
+                        "display_name" => $contact['first_name']." ".$contact['last_name'],
+                        "show_admin_bar_front" => false,
+                        "role" => "customer"
+                    ]);
+                    update_post_meta(
+                        $user_id,
+                        '_book_cf_dni',
+                        $contact['cf_dni']
+                    );
+                    update_post_meta(
+                        $user_id,
+                        '_book_referido_por',
+                        $item['referido_por']
+                    );
+                    update_post_meta(
+                        $user_id,
+                        '_book_contact_id',
+                        $item['contact_id']
+                    );
+                    $response["new"][] = $user_id;
+                    $response["log"][] = "User create with ID $user_id";
+                } else {
+                    $username = explode('@', $contact['email'])[0];
+                    $user_id = wp_insert_user([
+                        "ID" => $user->ID,
+                        "user_pass" => $username,
+                        "user_login" => $username,
+                        "user_email" => $contact['email'],
+                        "first_name" => $contact['first_name'],
+                        "last_name" => $contact['last_name'],
+                        "user_nicename" => $contact['first_name']."-".$contact['last_name'],
+                        "display_name" => $contact['first_name']." ".$contact['last_name'],
+                        "show_admin_bar_front" => false,
+                        "role" => "customer"
+                    ]);
+                    update_post_meta(
+                        $user_id,
+                        '_book_cf_dni',
+                        $contact['cf_dni']
+                    );
+                    update_post_meta(
+                        $user_id,
+                        '_book_referido_por',
+                        $item['referido_por']
+                    );
+                    update_post_meta(
+                        $user_id,
+                        '_book_contact_id',
+                        $item['contact_id']
+                    );
+                    $response["update"][] = $user_id;
+                    $response["log"][] = "User update with ID $user_id";
+                }
+            }
+        }
+        echo json_encode( $response );
+        die();
     }
 
     public static function import_products() {
@@ -68,6 +147,21 @@ class WooSellerAssistant {
                         $product->set_name( $item['name'] );
                         $product->set_image_id( $url_image );
                         $id = $product->save();
+                        update_post_meta(
+                            $id,
+                            '_book_item_id',
+                            $item['item_id']
+                        );
+                        update_post_meta(
+                            $id,
+                            '_book_account_id',
+                            $item['account_id']
+                        );
+                        update_post_meta(
+                            $id,
+                            '_book_account_name',
+                            $item['account_name']
+                        );
                         $response["log"][] = "Result save: $id";
                         $response["update"][] = $item;
                     }
@@ -81,12 +175,27 @@ class WooSellerAssistant {
                     $product->set_sku( $sku );
                     $product->set_image_id( $url_image );
                     $id = $product->save();
+                    update_post_meta(
+                        $id,
+                        '_book_item_id',
+                        $item['item_id']
+                    );
+                    update_post_meta(
+                        $id,
+                        '_book_account_id',
+                        $item['account_id']
+                    );
+                    update_post_meta(
+                        $id,
+                        '_book_account_name',
+                        $item['account_name']
+                    );
                     $response["log"][] = "Result save: $id";
                     $response["new"][] = $item;
                 }
             }
         }
-        echo json_encode( $response );
+        echo json_encode( $items[0] );
         die();
     }
 
@@ -150,7 +259,7 @@ class WooSellerAssistant {
             WooSellerAssistant::get_rate_usd()
         );
         // crear factura en Books
-        //self::order_to_invoice( $order );
+        self::order_to_invoice( $order );
     }
 
     public static function order_to_data_invoice($order) {
