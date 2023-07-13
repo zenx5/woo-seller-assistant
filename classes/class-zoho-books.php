@@ -7,11 +7,14 @@ class ZohoBooks extends ZohoApi {
     private static $baseurl = "https://www.zohoapis.com/books/v3/";
 
     public static function create_invoice($data = []) {
-        return [];
-        $token = self::refresh_token( get_option('wsa_zoho_refresh_token', '') );
+        $organization_id = get_option('wsa_zoho_book_organization', '');
+        $response = self::get_token();
+        if( $response["error"]==1 ) return ["error"=>"not token"];
+        $access_token = $response["access_token"];
+
         $url = "https://www.zohoapis.com/books/v3/invoices?organization_id=$organization_id";
         $headers = [
-            'Authorization:  Zoho-oauthtoken '.$token,
+            'Authorization:  Zoho-oauthtoken '.$access_token,
             'content-type: application/json'
         ];
         $ch = curl_init();
@@ -20,10 +23,10 @@ class ZohoBooks extends ZohoApi {
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-        $response = curl_exec($ch);
+        $response = json_decode( curl_exec($ch), true );
         curl_close($ch);
 
-        return $response;
+        return ( $response['code']==0 ) ? $response['invoice'] : $response;
     }
 
     public static function list_all_contacts() {

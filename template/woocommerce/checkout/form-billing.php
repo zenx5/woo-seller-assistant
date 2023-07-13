@@ -77,9 +77,9 @@ foreach( $_users as $_user ) {
 		<div style="display:flex; flex-direction:row; gap:5px;">
 			<label class="woocommerce-form__label" style="width:50%;">
 				<b>Cliente</b>
-				<select style="width:100%" v-model="client" v-on:change="selectUser">
+				<select style="width:100%" v-model="client" name="customer" v-on:change="selectUser">
 					<option value="-1">Nuevo Usuario</option>
-					<option v-for="customer in customersFiltered " value="curstomer.data.ID">{{customer.data.display_name}}</option>
+					<option v-for="customer in customersFiltered " :value="customer.data.ID">{{customer.data.display_name}}</option>
 					<!-- <?php foreach($users as $user): ?>
 						<option value="<?=$user["data"]["ID"]?>"><?=$user["data"]["user_login"]?></option>
 					<?php endforeach;?> -->
