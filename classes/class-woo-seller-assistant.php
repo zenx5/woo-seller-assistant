@@ -36,6 +36,7 @@ class WooSellerAssistant {
         remove_action( 'wp_loaded', array( 'WC_Form_Handler', 'update_cart_action' ), 20 );
         add_action( 'wp_loaded', array( 'WC_Cart_Two', 'update_cart_action' ), 20 );
         add_filter( 'wsa_price_in_cart', [__CLASS__, 'get_price_in_cart'],1,3);
+        add_filter( 'woocommerce_checkout_customer_id', [__CLASS__, 'set_order_customer_id']);
         add_action( 'woocommerce_checkout_create_order_line_item', [__CLASS__, 'update_item_order'], 1, 4);
         add_action( 'woocommerce_checkout_order_created', [__CLASS__, 'order_created'] );
         add_action( 'wp_head', [__CLASS__, 'js_head']);
@@ -43,6 +44,26 @@ class WooSellerAssistant {
         add_action( 'save_post', [__CLASS__, 'update_custom_field']);
         add_filter( 'manage_edit-shop_order_columns', [__CLASS__, 'add_column_list_shop_order']);
         add_action( 'manage_posts_custom_column',  [__CLASS__, 'column_shop_order_content']);
+        add_action( 'woocommerce_admin_order_data_after_order_details', [__CLASS__, 'book_details']);
+    }
+
+
+    public static function book_details( $order ) {
+        $invoice_id = count( get_post_meta($order->get_id(), '_book_invoice_id') )>0 ? get_post_meta($order->get_id(), '_book_invoice_id')[0] : null; 
+        $error = count( get_post_meta($order->get_id(), '_book_error') )>0 ? get_post_meta($order->get_id(), '_book_error')[0] : null; 
+        
+        ?>
+            <div class="order_data_column" style="width:100%;">
+                <h3>Zoho Books:</h3>
+                <p class="form-field form-field-wide" >
+                    <label>Invoice Id:</label>
+                    <input disabled value="<?=$invoice_id?>" style="width:100% !important; padding:4px; box-sizing: border-box;display: inline-block;margin: 0;position: relative;vertical-align: middle;"/>
+                </p>
+                <?php if( $error ){
+                    echo "<p>$error</p>";
+                }?>
+            </div>
+        <?php
     }
 
     public static function import_customers() {
@@ -68,22 +89,22 @@ class WooSellerAssistant {
                         "show_admin_bar_front" => false,
                         "role" => "customer"
                     ]);
-                    update_post_meta(
+                    update_user_meta(
                         $user_id,
                         '_book_cf_dni',
                         $contact['cf_dni']
                     );
-                    update_post_meta(
+                    update_user_meta(
                         $user_id,
                         '_book_referido_por',
-                        $item['referido_por']
+                        $contact['referido_por']
                     );
-                    update_post_meta(
+                    update_user_meta(
                         $user_id,
                         '_book_contact_id',
-                        $item['contact_id']
+                        $contact['contact_id']
                     );
-                    $response["new"][] = $user_id;
+                    $response["new"][] = $contact;
                     $response["log"][] = "User create with ID $user_id";
                 } else {
                     $username = explode('@', $contact['email'])[0];
@@ -99,22 +120,22 @@ class WooSellerAssistant {
                         "show_admin_bar_front" => false,
                         "role" => "customer"
                     ]);
-                    update_post_meta(
+                    update_user_meta(
                         $user_id,
                         '_book_cf_dni',
                         $contact['cf_dni']
                     );
-                    update_post_meta(
+                    update_user_meta(
                         $user_id,
                         '_book_referido_por',
-                        $item['referido_por']
+                        $contact['referido_por']
                     );
-                    update_post_meta(
+                    update_user_meta(
                         $user_id,
                         '_book_contact_id',
-                        $item['contact_id']
+                        $contact['contact_id']
                     );
-                    $response["update"][] = $user_id;
+                    $response["update"][] = $contact;
                     $response["log"][] = "User update with ID $user_id";
                 }
             }
@@ -162,6 +183,11 @@ class WooSellerAssistant {
                             '_book_account_name',
                             $item['account_name']
                         );
+                        update_post_meta(
+                            $id,
+                            '_book_unit',
+                            $item['unit']
+                        );
                         $response["log"][] = "Result save: $id";
                         $response["update"][] = $item;
                     }
@@ -190,12 +216,17 @@ class WooSellerAssistant {
                         '_book_account_name',
                         $item['account_name']
                     );
+                    update_post_meta(
+                        $id,
+                        '_book_unit',
+                        $item['unit']
+                    );
                     $response["log"][] = "Result save: $id";
                     $response["new"][] = $item;
                 }
             }
         }
-        echo json_encode( $items[0] );
+        echo json_encode( $response );
         die();
     }
 
@@ -252,84 +283,59 @@ class WooSellerAssistant {
     }
 
     public static function order_created( $order ){
-        //setear la tasa del dia a la orden
         update_post_meta(
             $order->get_id(),
             'order_rate_usd',
             WooSellerAssistant::get_rate_usd()
         );
-        // crear factura en Books
-        self::order_to_invoice( $order );
+        
+        $invoice = self::order_to_data_invoice( $order );
+        if( isset($invoice["invoice_id"]) ) {
+            update_post_meta(
+                $order->get_id(),
+                '_book_invoice_id',
+                $invoice["invoice_id"]
+            );
+        } else {
+            update_post_meta(
+                $order->get_id(),
+                '_book_error',
+                json_encode( $invoice )
+            );
+        }
     }
 
     public static function order_to_data_invoice($order) {
+        $user_id = $order->get_customer_id();
+        [$customer_id] = get_user_meta($user_id, '_book_contact_id');
+        $customer = new WC_Customer( $customer_id );
+        $line_items = [];
+        foreach ( $order->get_items() as $item ) {
+            $product_id = $item->get_product_id();
+            $_product = new WC_Product( $product_id );
+            [$item_id] = get_post_meta( $product_id, '_book_item_id' );
+            [$unit] = get_post_meta( $product_id, '_book_unit' );
+
+            $line_items[] = [
+                "item_id" => $item_id,
+                "name" => $item->get_name(),
+                "quantity" => floatval( $item->get_quantity() ),
+                "description" => $_product->get_description(),
+                "rate" => floatval( $item->get_total() ),
+                "unit" => $unit,
+                "discount" => 0
+            ];
+
+        }
         $data = [
-            "customer_id" => 982000000567001,            
-            "invoice_number" => "INV-00003",
-            "reference_number" => " ",
-            "date" => "2013-11-17",
-                "payment_terms" => 15,
-                "payment_terms_label" => "Net 15",
-            "due_date" => "2013-12-03",
+            "customer_id" => $customer_id,
+            "date" => $order->get_date_created()->date('Y-m-d'),
+            "due_date" => $order->get_date_created()->date('Y-m-d'),
             "discount" => 0,
-            "line_items" => [
-                [
-                    "item_id" => 982000000030049,
-                    "product_type" => "goods",
-                    "name"  => "Hard Drive",
-                    "description"   => "500GB, USB 2.0 interface 1400 rpm, protective hard case.",
-                    // "item_order"    => 1,
-                    // "bcy_rate"  => 120,
-                    // "rate"  => 120,
-                    "quantity"  => 1,
-                    "unit"  => "Kgs",
-                    // "discount_amount"   => 0,
-                    "discount"  => 0,
-                    // "tags" => [
-                    //     [
-                    //         "tag_id" => 982000000009070,
-                    //         "tag_option_id" => 982000000002670
-                    //     ]
-                    // ],
-                    // "tax_id" => 982000000557028,
-                    // "tds_tax_id" => "982000000557012",
-                    // "tax_name" => "VAT",
-                    // "tax_type" => "tax",
-                    // "tax_percentage" => 12.5,
-                    // "tax_treatment_code" => "uae_others",
-                    // "header_name" => "Electronic devices"
-                ]
-            ],
-            // "payment_options" => [
-            //     "payment_gateways" => [
-            //         [
-            //             "configured" => true,
-            //             "additional_field1" => "standard",
-            //             "gateway_name" => "paypal"
-            //         ]
-            //     ]
-            // ],
-            // "allow_partial_payments" => true,
-            // "custom_body" => " ",
-            // "custom_subject" => " ",
-            // "notes" => "Looking forward for your business.",
-            // "terms" => "Terms & Conditions apply",
-            // "shipping_charge" => 0,
-            // "adjustment" => 0,
-            // "adjustment_description" => " ",
-            // "reason" => " ",
-            // "tax_authority_id" => 11149000000061052,
-            // "tax_exemption_id" => 11149000000061054,
-            // "avatax_use_code" => "string",
-            // "avatax_exempt_no" => "string",
-            // "tax_id" => 982000000557028,
-            // "expense_id" => " ",
-            // "salesorder_item_id" => " ",
-            // "avatax_tax_code" => "string",
-            // "time_entry_ids" => []
+            "line_items" => $line_items
         ];
 
-        ZohoBooks::create_invoice($data);
+        return ZohoBooks::create_invoice($data);
     }
 
     public static function js_head() {
@@ -348,6 +354,13 @@ class WooSellerAssistant {
 
     public static function wc_price($raw, $price, $options=null) {
         return $raw ? $price : wc_price($price, $options);
+    }
+
+    public static function set_order_customer_id($id) {
+        if( isset($_POST['customer']) ) {
+            return $_POST['customer']==-1 ? $id : $_POST['customer'];
+        }
+        return $id;
     }
 
     public static function update_item_order($item, $cart_item_key, $values, $order ) {

@@ -10,8 +10,9 @@
     $woo_public_client = get_option('wsa_woo_public_client', '');
     $woo_private_client = get_option('wsa_woo_private_client', '');
     if($access_token!='') {
-        // echo "Token: $refresh_token <br/>";
-        // echo json_encode( ZohoBooks::list_all_invoices() );
+        // $order = new WC_Order(320);
+        // echo json_encode( WooSellerAssistant::order_created($order) );
+        // echo json_encode( get_post_meta(320) )."<br/>";
         echo "<div style='display:inline-block; font-weight:bold;top:10px; padding:4px; color:white; background-color:green; margin:5px; border-radius:10px;'>active</div>";
     } else {
         echo "<div style='display:inline-block; font-weight:bold;top:10px; padding:4px; color:white; background-color:red; margin:5px; border-radius:10px;'>inactive</div>";
