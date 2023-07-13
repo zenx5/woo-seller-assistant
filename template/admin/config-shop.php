@@ -10,9 +10,6 @@
     $woo_public_client = get_option('wsa_woo_public_client', '');
     $woo_private_client = get_option('wsa_woo_private_client', '');
     if($access_token!='') {
-        // $order = new WC_Order(320);
-        // echo json_encode( WooSellerAssistant::order_created($order) );
-        // echo json_encode( get_post_meta(320) )."<br/>";
         echo "<div style='display:inline-block; font-weight:bold;top:10px; padding:4px; color:white; background-color:green; margin:5px; border-radius:10px;'>active</div>";
     } else {
         echo "<div style='display:inline-block; font-weight:bold;top:10px; padding:4px; color:white; background-color:red; margin:5px; border-radius:10px;'>inactive</div>";
@@ -50,9 +47,9 @@
     <li class="nav-item <?=$tab==1?'active':''?>" data-tab="1">Bodega</li>
     <li class="nav-item <?=$tab==2?'active':''?>" data-tab="2">Zoho</li>
     <li class="nav-item <?=$tab==3?'active':''?>" data-tab="3">WooCommerce</li>
-    <li class="nav-item <?=$tab==4?'active':''?>" data-tab="4">Facturas</li>
+    <!-- <li class="nav-item <?=$tab==4?'active':''?>" data-tab="4">Facturas</li> -->
 </ul>
-<?php for($i=1; $i<=4; $i++): ?>
+<?php for($i=1; $i<=3; $i++): ?>
     <div id="tab-<?=$i?>" class="tab-content <?=$tab==$i?'active':''?>">
         <?php include 'tab'.$i.'.php'; ?>
     </div>
