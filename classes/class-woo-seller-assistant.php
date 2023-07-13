@@ -32,7 +32,8 @@ class WooSellerAssistant {
         add_action( 'wp_ajax_update_config', [__CLASS__, 'update_config']);
         add_action( 'wp_ajax_generate_code', [__CLASS__, 'generate_code']);
         add_action( 'wp_ajax_import_products', [__CLASS__, 'import_products']);
-        add_action( 'wp_ajax_import_customers', [__CLASS__, 'import_customers']);        
+        add_action( 'wp_ajax_import_customers', [__CLASS__, 'import_customers']);
+        add_action( 'wp_ajax_create_invoice', [__CLASS__, 'action_create_invoice']);
         remove_action( 'wp_loaded', array( 'WC_Form_Handler', 'update_cart_action' ), 20 );
         add_action( 'wp_loaded', array( 'WC_Cart_Two', 'update_cart_action' ), 20 );
         add_filter( 'wsa_price_in_cart', [__CLASS__, 'get_price_in_cart'],1,3);
@@ -56,8 +57,30 @@ class WooSellerAssistant {
             <div class="order_data_column" style="width:100%;">
                 <h3>Zoho Books:</h3>
                 <p class="form-field form-field-wide" >
-                    <label>Invoice Id:</label>
-                    <input disabled value="<?=$invoice_id?>" style="width:100% !important; padding:4px; box-sizing: border-box;display: inline-block;margin: 0;position: relative;vertical-align: middle;"/>
+                    <label>Factura Id:</label>
+                    <?php if( $invoice_id ): ?>
+                        <input disabled value="<?=$invoice_id?>" style="width:100% !important; padding:4px; box-sizing: border-box;display: inline-block;margin: 0;position: relative;vertical-align: middle;"/>
+                    <?php else: ?>
+                        <button type="button" id="create-invoice"class="button">Generar Factura</button>
+                        <script>
+                            jQuery('#create-invoice')
+                                .click(function(){
+                                    console.log(this)
+                                    fetch(ajaxurl, {
+                                        method:'post',
+                                        headers:{
+                                            'Content-Type':'application/x-www-form-urlencoded'
+                                        },
+                                        body:[
+                                            `action=create_invoice`,
+                                            `order_id=<?=$order->get_id()?>`,
+                                        ].join('&')
+                                    })
+                                        .then( response => response.json() )
+                                        .then( json => document.location.reload )
+                                })
+                        </script>
+                    <?php endif; ?>
                 </p>
                 <?php if( $error ){
                     echo "<p>$error</p>";
@@ -255,13 +278,14 @@ class WooSellerAssistant {
     }
 
     public static function column_shop_order_content($column) {
+        global $order;
         global $post;
         $product_id = $post->ID;
         switch ($column)
         {
             case 'order_rate_usd':
                 echo get_post_meta($product_id, 'order_rate_usd') ? get_post_meta($product_id, 'order_rate_usd')[0] : '-';
-            break;
+                break;
         }
     }
 
@@ -305,7 +329,7 @@ class WooSellerAssistant {
         }
     }
 
-    public static function order_to_data_invoice($order) {
+    public static function order_to_data_invoice($order, $id = null ) {
         $user_id = $order->get_customer_id();
         [$customer_id] = get_user_meta($user_id, '_book_contact_id');
         $customer = new WC_Customer( $customer_id );
@@ -336,6 +360,30 @@ class WooSellerAssistant {
         ];
 
         return ZohoBooks::create_invoice($data);
+    }
+
+    public static function action_create_invoice() {
+        if( !isset($_POST['order_id']) ) {
+            echo "[]";
+        } else {
+            $order = new WC_Order( $_POST['order_id'] );
+            $invoice = self::order_to_data_invoice( $order );
+            if( isset($invoice["invoice_id"]) ) {
+                update_post_meta(
+                    $order->get_id(),
+                    '_book_invoice_id',
+                    $invoice["invoice_id"]
+                );
+            } else {
+                update_post_meta(
+                    $order->get_id(),
+                    '_book_error',
+                    json_encode( $invoice )
+                );
+            }
+            echo json_encode($invoice);
+        }
+        die();
     }
 
     public static function js_head() {
