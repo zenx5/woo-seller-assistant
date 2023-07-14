@@ -530,10 +530,8 @@ class WooSellerAssistant {
         if ( ! $template_path ) 
             $template_path = $woocommerce->template_url;
     
-        // $plugin_path  = untrailingslashit( plugin_dir_path( __FILE__ ) )  . '/template/woocommerce/';
-        $plugin_path = '/app/wp-content/plugins/woo-seller-assistant/template/woocommerce/';
+        $plugin_path = plugin_dir_path(__DIR__).'template/woocommerce/';
         
-        // Look within passed path within the theme - this is priority
         $template = locate_template(
             array(
                 $template_path . $template_name,
