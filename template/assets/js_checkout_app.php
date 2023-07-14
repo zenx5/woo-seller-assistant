@@ -5,7 +5,6 @@
 ?>
     <script>
         const { createApp } = Vue
-        console.log('js_footer')
         createApp({
             data(){
                 return {
@@ -18,13 +17,16 @@
                 customersFiltered: function() {
                     return this.customers.filter( customer => {
                         if( this.search==="" ) return true;
-                        return customer.data.display_name.includes( this.search )
+                        return (
+                            String(customer.data.display_name).toLowerCase().includes( this.search.toLowerCase() ) ||
+                            String(customer.data.dni).toLowerCase().includes( this.search.toLowerCase() )
+                        )
                     })
                 }
             },
             methods: {
                 searchUser(){
-                    console.log( this.search )
+                    
                 },
                 createUser(){
                     const headers = new Headers()
@@ -74,15 +76,29 @@
 
                 },
                 selectUser(event) {
-                    console.log( 'select user' )
                     if( event.target?.value !== -1 ) {
                         const customer = wp_customers.find( user => user.ID==event.target?.value )
-                        console.log( customer )
+                        jQuery('#dni').val( customer.data.dni )
                         Object.keys( customer.billing ).forEach( key => {
                             const field = document.querySelector(`#${key}`)
                             if( field ) {
                                 const item = jQuery(`#${key}`)
-                                item.val( customer.billing[key] )
+                                const [first, last] = customer.data.display_name.split(' ')
+                                if( 'billing_email' === key ) {
+                                    item.val( customer.billing[key] || customer.data.user_email )
+                                }
+                                else if( 'billing_first_name' === key ) {
+                                    item.val( customer.billing[key] || first )
+                                }
+                                else if( 'billing_last_name' === key ) {
+                                    item.val( customer.billing[key] || last )
+                                }
+                                else if( 'billing_country'===key || 'billing_state'===key ){
+                                    item.val( 'billing_country'===key ? 'VE' : 'VE-F' )
+                                }
+                                else {
+                                    item.val( customer.billing[key] )
+                                }
                                 if( item.is('select') ) {
                                     item.change()
                                 }

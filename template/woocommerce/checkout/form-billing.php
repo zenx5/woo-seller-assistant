@@ -29,6 +29,8 @@ $_users = $is_seller ? get_users([
 foreach( $_users as $_user ) {
 	$customer = new WC_Customer( $_user->ID );
 	$data = json_decode( json_encode( $_user->data ), true );
+	$dni = get_user_meta($_user->ID, '_book_cf_dni');
+	$data["dni"] = count($dni) ? $dni[0] : "";
 	unset( $data["user_pass"] );
 	$users[] = [
 		"ID" => $_user->ID,
@@ -114,7 +116,24 @@ foreach( $_users as $_user ) {
 			$fields = $checkout->get_checkout_fields( 'billing' );
 
 			foreach ( $fields as $key => $field ) {
-				woocommerce_form_field( $key, $field, $checkout->get_value( $key ) );
+				
+				if( $key!="billing_company" ) {
+					
+					// if( $key=="billing_country" ) $value = "VE";
+					// else if( $key=="billing_state" ) $value = "VE-F";
+					// else $value = $checkout->get_value( $key );
+
+					// if( $key=="billing_country" || $key=="billing_state" ) $field = array_merge($field, [ "required"=>false, "custom_attributes" => ["disabled" => true] ]);
+					
+					woocommerce_form_field( $key, $field, $checkout->get_value( $key ) );
+				}
+				if( $key=="billing_last_name" ) {
+					woocommerce_form_field( "dni", [
+						"type" => "text",
+						"label" => "DNI",
+						"class" => "form-row form-row-wide"
+					], "" );
+				}
 			}
 			?>
 		</div>
