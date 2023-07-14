@@ -5,6 +5,7 @@ defined( 'ABSPATH' ) || exit;
 require_once 'class-zoho-books.php';
 require_once 'class-second-currency-rates.php';
 require_once 'class-wc-cart-2.php';
+require_once 'class-data-format.php';
 
 
 class WooSellerAssistant {
@@ -40,12 +41,13 @@ class WooSellerAssistant {
         add_filter( 'woocommerce_checkout_customer_id', [__CLASS__, 'set_order_customer_id']);
         add_action( 'woocommerce_checkout_create_order_line_item', [__CLASS__, 'update_item_order'], 1, 4);
         add_action( 'woocommerce_checkout_order_created', [__CLASS__, 'order_created'] );
+        add_action( 'woocommerce_order_status_completed', [__CLASS__, 'pay_invoice']);
+        add_action( 'woocommerce_admin_order_data_after_order_details', [__CLASS__, 'book_details']);
         add_action( 'wp_head', [__CLASS__, 'js_head']);
         add_action( 'wp_footer', [__CLASS__, 'js_footer']);
         add_action( 'save_post', [__CLASS__, 'update_custom_field']);
         add_filter( 'manage_edit-shop_order_columns', [__CLASS__, 'add_column_list_shop_order']);
         add_action( 'manage_posts_custom_column',  [__CLASS__, 'column_shop_order_content']);
-        add_action( 'woocommerce_admin_order_data_after_order_details', [__CLASS__, 'book_details']);
     }
 
 
@@ -306,6 +308,20 @@ class WooSellerAssistant {
         }
     }
 
+    public static function pay_invoice( $order_id ) {
+        $order = new WC_Order( $order_id );
+        // $paid = get_post_meta( $order_id, '_book_paid' );
+        // $invoice_id = get_post_meta( $order_id, '_book_invoice_id' );
+        // if( !count($invoice_id) ) return;
+        // if( !count($paid) ) return;
+        // if( $paid[0]==0 ) return;
+
+        $response = ZohoBooks::create_payment( DataFormat::order_data_to_payment_data( $order ) );
+        if( count($response)!=0 ) {
+            update_post_meta( $order->get_id(), '_book_paid', 1 );
+        }
+    }
+
     public static function order_created( $order ){
         update_post_meta(
             $order->get_id(),
@@ -313,12 +329,17 @@ class WooSellerAssistant {
             WooSellerAssistant::get_rate_usd()
         );
         
-        $invoice = self::order_to_data_invoice( $order );
+        $invoice = ZohoBooks::create_invoice( DataFormat::order_to_data_invoice( $order ) );
         if( isset($invoice["invoice_id"]) ) {
             update_post_meta(
                 $order->get_id(),
                 '_book_invoice_id',
                 $invoice["invoice_id"]
+            );
+            update_post_meta(
+                $order->get_id(),
+                '_book_paid',
+                0
             );
         } else {
             update_post_meta(
@@ -326,40 +347,12 @@ class WooSellerAssistant {
                 '_book_error',
                 json_encode( $invoice )
             );
+            update_post_meta(
+                $order->get_id(),
+                '_book_paid',
+                0
+            );
         }
-    }
-
-    public static function order_to_data_invoice($order, $id = null ) {
-        $user_id = $order->get_customer_id();
-        [$customer_id] = get_user_meta($user_id, '_book_contact_id');
-        $customer = new WC_Customer( $customer_id );
-        $line_items = [];
-        foreach ( $order->get_items() as $item ) {
-            $product_id = $item->get_product_id();
-            $_product = new WC_Product( $product_id );
-            [$item_id] = get_post_meta( $product_id, '_book_item_id' );
-            [$unit] = get_post_meta( $product_id, '_book_unit' );
-
-            $line_items[] = [
-                "item_id" => $item_id,
-                "name" => $item->get_name(),
-                "quantity" => floatval( $item->get_quantity() ),
-                "description" => $_product->get_description(),
-                "rate" => floatval( $item->get_total() ),
-                "unit" => $unit,
-                "discount" => 0
-            ];
-
-        }
-        $data = [
-            "customer_id" => $customer_id,
-            "date" => $order->get_date_created()->date('Y-m-d'),
-            "due_date" => $order->get_date_created()->date('Y-m-d'),
-            "discount" => 0,
-            "line_items" => $line_items
-        ];
-
-        return ZohoBooks::create_invoice($data);
     }
 
     public static function action_create_invoice() {
@@ -367,7 +360,7 @@ class WooSellerAssistant {
             echo "[]";
         } else {
             $order = new WC_Order( $_POST['order_id'] );
-            $invoice = self::order_to_data_invoice( $order );
+            $invoice = ZohoBooks::create_invoice( DataFormat::order_to_data_invoice( $order ) );
             if( isset($invoice["invoice_id"]) ) {
                 update_post_meta(
                     $order->get_id(),
@@ -530,10 +523,8 @@ class WooSellerAssistant {
         if ( ! $template_path ) 
             $template_path = $woocommerce->template_url;
     
-        // $plugin_path  = untrailingslashit( plugin_dir_path( __FILE__ ) )  . '/template/woocommerce/';
-        $plugin_path = '/app/wp-content/plugins/woo-seller-assistant/template/woocommerce/';
+        $plugin_path = plugin_dir_path(__DIR__).'template/woocommerce/';
         
-        // Look within passed path within the theme - this is priority
         $template = locate_template(
             array(
                 $template_path . $template_name,
