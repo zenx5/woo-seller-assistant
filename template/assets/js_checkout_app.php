@@ -25,9 +25,6 @@
                 }
             },
             methods: {
-                searchUser(){
-                    
-                },
                 createUser(){
                     const headers = new Headers()
                     headers.set('Authorization', "<?=$token?>")
