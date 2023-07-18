@@ -48,6 +48,16 @@ class WooSellerAssistant {
         add_action( 'save_post', [__CLASS__, 'update_custom_field']);
         add_filter( 'manage_edit-shop_order_columns', [__CLASS__, 'add_column_list_shop_order']);
         add_action( 'manage_posts_custom_column',  [__CLASS__, 'column_shop_order_content']);
+        add_filter( 'posts_clauses', [__CLASS__, 'woocommerce_get_catalog_ordering_args']);
+    }
+
+    public static function woocommerce_get_catalog_ordering_args($args) {
+        if( isset($_GET['searchbysku']) ) {
+            $sku = isset($_GET['searchbysku']) ? $_GET['searchbysku'] : '';
+            $args['join'] .= " LEFT JOIN wp_wc_product_meta_lookup ON (wp_posts.ID=wp_wc_product_meta_lookup.product_id) ";
+            $args['where'] .= " AND wp_wc_product_meta_lookup.sku LIKE '%$sku%' ";
+        }
+        return $args;
     }
 
 
@@ -184,7 +194,10 @@ class WooSellerAssistant {
                 if( $product_id ) {
                     $image_document_id = $item['image_document_id'];
                     $organization_id = get_option('wsa_zoho_book_organization', '');
-                    $url_image = "https://books.zoho.com/api/v3/documents/$image_document_id?organization_id=$organization_id&inline=true";
+                    $url_image = "";
+                    if( count( $image_document_id )>4 )  {
+                        $url_image = "https://books.zoho.com/api/v3/documents/$image_document_id?organization_id=$organization_id&inline=true";    
+                    }
                     $product = new WC_Product( $product_id );
                     $response["log"][] = "Price compare: ".$product->get_regular_price()."!=".$item['rate']."?";
                     $response["log"][] = "Name compare: ".$product->get_name()."!=".$item['name']."?";
