@@ -118,8 +118,7 @@
                 ].join('&')
             })
             const result = await response.text();
-            // if( result==1 ) document.location.reload();
-            console.log( result )
+            if( result ) document.location.reload();
         })
     </script>
 <?php endif; ?>
