@@ -30,10 +30,10 @@ class WooSellerAssistant {
     public static function init() {
         add_filter( 'woocommerce_locate_template', [__CLASS__, 'template_replace'],1,3);
         add_action( 'admin_menu', [__CLASS__, 'admin_menu']);
-        add_action( 'wp_ajax_update_config', [__CLASS__, 'update_config']);
-        add_action( 'wp_ajax_generate_code', [__CLASS__, 'generate_code']);
-        add_action( 'wp_ajax_import_products', [__CLASS__, 'import_products']);
-        add_action( 'wp_ajax_import_customers', [__CLASS__, 'import_customers']);
+        add_action( 'wp_ajax_update_config', [__CLASS__, 'action_update_config']);
+        add_action( 'wp_ajax_generate_code', [__CLASS__, 'action_generate_code']);
+        add_action( 'wp_ajax_import_products', [__CLASS__, 'action_import_products']);
+        add_action( 'wp_ajax_import_customers', [__CLASS__, 'action_import_customers']);
         add_action( 'wp_ajax_create_invoice', [__CLASS__, 'action_create_invoice']);
         remove_action( 'wp_loaded', array( 'WC_Form_Handler', 'update_cart_action' ), 20 );
         add_action( 'wp_loaded', array( 'WC_Cart_Two', 'update_cart_action' ), 20 );
@@ -102,7 +102,7 @@ class WooSellerAssistant {
         <?php
     }
 
-    public static function import_customers() {
+    public static function action_import_customers() {
         $response = [
             "new" => [],
             "update" => [],
@@ -180,7 +180,7 @@ class WooSellerAssistant {
         die();
     }
 
-    public static function import_products() {
+    public static function action_import_products() {
         $response = [
             "new" => [],
             "update" => [],
@@ -269,7 +269,7 @@ class WooSellerAssistant {
         die();
     }
 
-    public static function generate_code() {
+    public static function action_generate_code() {
         if( isset($_POST['code']) ) {
             $code = $_POST['code'];
             $client_id = get_option('wsa_zoho_client_id', '');
@@ -488,7 +488,7 @@ class WooSellerAssistant {
         return $term_cart[0]->term_id;
     }
 
-    public static function update_config() {
+    public static function action_update_config() {
         if( isset($_POST['wsa_rate_usd']) ) {
             WooSellerAssistant::set_rate_usd( $_POST['wsa_rate_usd'] );
         }
