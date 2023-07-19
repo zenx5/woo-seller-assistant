@@ -4,6 +4,7 @@
     $token = "Basic ".base64_encode("$public_client:$private_client");
 ?>
     <script>
+        jQuery('#billing_email').attr('v-model','email')
         const { createApp } = Vue
         createApp({
             data(){
@@ -11,6 +12,7 @@
                     customers: wp_customers,
                     client:-1,
                     search:'',
+                    email:''
                 }
             },
             computed: {
@@ -22,10 +24,17 @@
                             String(customer.data.dni).toLowerCase().includes( this.search.toLowerCase() )
                         )
                     })
+                },
+                isValidEmail(){
+                    return wp_customers.findIndex( customer => customer.data.user_email===email )===-1
                 }
             },
             methods: {
                 createUser(){
+                    if( this.isValidEmail() ) {
+                        alert('El email pertenece a otro usuario')
+                        return
+                    }
                     const headers = new Headers()
                     headers.set('Authorization', "<?=$token?>")
                     headers.set('Content-Type', 'application/json')
@@ -38,7 +47,7 @@
                         method:'post',
                         headers: headers,
                         body:JSON.stringify({
-                            "email": document.querySelector('#billing_email')?.value,
+                            "email": this.email,
                             "first_name": document.querySelector('#billing_first_name')?.value,
                             "last_name": document.querySelector('#billing_last_name')?.value,
                             "username": username,
@@ -69,11 +78,14 @@
                         })
                     })
                     .then( response => response.json() )
-                    .then( result => console.log( result ) )
+                    .then( result => {
+                        console.log( result )
+                        document.location.reload()
+                    } )
 
                 },
                 selectUser(event) {
-                    if( event.target?.value !== -1 ) {
+                    if( event.target?.value != -1 ) {
                         const customer = wp_customers.find( user => user.ID==event.target?.value )
                         jQuery('#dni').val( customer.data.dni )
                         Object.keys( customer.billing ).forEach( key => {
@@ -83,6 +95,7 @@
                                 const [first, last] = customer.data.display_name.split(' ')
                                 if( 'billing_email' === key ) {
                                     item.val( customer.billing[key] || customer.data.user_email )
+                                    item.attr('disabled', true)
                                 }
                                 else if( 'billing_first_name' === key ) {
                                     item.val( customer.billing[key] || first )
@@ -106,6 +119,22 @@
                             if( field ) {
                                 const item = jQuery(`#${key}`)
                                 item.val( customer.shipping[key] )
+                                if( item.is('select') ) {
+                                    item.change()
+                                }
+                            }
+                        })
+                    } else {
+                        const billing = wp_customers.length ? wp_customers[0].billing : null;
+                        jQuery('#dni').val('')
+                        Object.keys( billing ).forEach( key => {
+                            const field = document.querySelector(`#${key}`)
+                            if( field ) {
+                                const item = jQuery(`#${key}`)
+                                item.val('')
+                                if( 'billing_email' === key ) {
+                                    item.attr('disabled', false)
+                                }
                                 if( item.is('select') ) {
                                     item.change()
                                 }

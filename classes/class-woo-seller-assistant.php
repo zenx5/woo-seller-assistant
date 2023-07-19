@@ -41,7 +41,7 @@ class WooSellerAssistant {
         add_filter( 'woocommerce_checkout_customer_id', [__CLASS__, 'set_order_customer_id']);
         add_action( 'woocommerce_checkout_create_order_line_item', [__CLASS__, 'update_item_order'], 1, 4);
         add_action( 'woocommerce_checkout_order_created', [__CLASS__, 'order_created'] );
-        add_action( 'woocommerce_checkout_order_created', [__CLASS__, 'update_address'] );
+        add_action( 'woocommerce_checkout_order_created', [__CLASS__, 'update_user_data'] );
         add_action( 'woocommerce_order_status_completed', [__CLASS__, 'pay_invoice']);
         add_action( 'woocommerce_admin_order_data_after_order_details', [__CLASS__, 'book_details']);
         add_action( 'wp_head', [__CLASS__, 'js_head']);
@@ -336,10 +336,7 @@ class WooSellerAssistant {
         }
     }
 
-    public static function update_address( $order ){
-        $first_name = $order->get_billing_first_name();
-        $last_name = $order->get_billing_last_name();
-        $email = $order->get_billing_email();
+    public static function update_user_data( $order ){
         $billing_address_1 = $order->get_billing_address_1();
         $billing_address_2 = $order->get_billing_address_2();
         $billing_city = $order->get_billing_city();
@@ -349,25 +346,18 @@ class WooSellerAssistant {
         $billing_phone = $order->get_billing_phone();
 
         $user = get_user_by( 'email', $email );
-        $user_id = wp_insert_user([
-            "ID" => $user->ID,
-            "first_name" => $first_name,
-            "last_name" => $last_name,
-            "user_nicename" => $first_name."-".$last_name,
-            "display_name" => $first_name." ".$last_name,
-            "billing_address_1" => $billing_address_1,
-            "billing_address_2" => $billing_address_2,
-            "billing_city" => $billing_city,
-            "billing_state" => $billing_state,
-            "billing_postcode" => $billing_postcode,
-            "billing_country" => $billing_country,
-            "billing_phone" => $billing_phone
-        ]);
-        // update_user_meta(
-        //     $user_id,
-        //     '_book_cf_dni',
-        //     $contact['cf_dni']
-        // );
+        if( $user ) {
+            $user_id = wp_insert_user([
+                "ID" => $user->ID,
+                "billing_address_1" => $billing_address_1,
+                "billing_address_2" => $billing_address_2,
+                "billing_city" => $billing_city,
+                "billing_state" => $billing_state,
+                "billing_postcode" => $billing_postcode,
+                "billing_country" => $billing_country,
+                "billing_phone" => $billing_phone
+            ]);
+        }
     }
 
     public static function order_created( $order ){
