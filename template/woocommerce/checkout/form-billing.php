@@ -82,9 +82,6 @@ foreach( $_users as $_user ) {
 				<select style="width:100%" v-model="client" name="customer" v-on:change="selectUser">
 					<option value="-1">Nuevo Usuario</option>
 					<option v-for="customer in customersFiltered " :value="customer.data.ID">{{customer.data.display_name}}</option>
-					<!-- <?php foreach($users as $user): ?>
-						<option value="<?=$user["data"]["ID"]?>"><?=$user["data"]["user_login"]?></option>
-					<?php endforeach;?> -->
 				</select>
 			</label>
 			<label class="woocommerce-form__label" style="width:50%;">
