@@ -29,6 +29,9 @@
                     return wp_customers.findIndex( customer => customer.data.user_email===email )===-1
                 }
             },
+            mounted() {
+                this.cleanFields()
+            },
             methods: {
                 createUser(){
                     if( this.isValidEmail() ) {
@@ -84,8 +87,26 @@
                     } )
 
                 },
+                cleanFields() {
+                    const billing = wp_customers.length ? wp_customers[0].billing : null;
+                    jQuery('#dni').val('')
+                    Object.keys( billing ).forEach( key => {
+                        const field = document.querySelector(`#${key}`)
+                        if( field ) {
+                            const item = jQuery(`#${key}`)
+                            item.val('')
+                            if( 'billing_email' === key ) {
+                                item.attr('disabled', false)
+                            }
+                            if( item.is('select') ) {
+                                item.change()
+                            }
+                        }
+                    })
+                },
                 selectUser(event) {
                     if( event.target?.value != -1 ) {
+                        jQuery('#place_order').attr('disabled', false)
                         const customer = wp_customers.find( user => user.ID==event.target?.value )
                         jQuery('#dni').val( customer.data.dni )
                         Object.keys( customer.billing ).forEach( key => {
@@ -125,21 +146,8 @@
                             }
                         })
                     } else {
-                        const billing = wp_customers.length ? wp_customers[0].billing : null;
-                        jQuery('#dni').val('')
-                        Object.keys( billing ).forEach( key => {
-                            const field = document.querySelector(`#${key}`)
-                            if( field ) {
-                                const item = jQuery(`#${key}`)
-                                item.val('')
-                                if( 'billing_email' === key ) {
-                                    item.attr('disabled', false)
-                                }
-                                if( item.is('select') ) {
-                                    item.change()
-                                }
-                            }
-                        })
+                        jQuery('#place_order').attr('disabled', true)
+                        this.cleanFields()
                     }
                 }
             }
