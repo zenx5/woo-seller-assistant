@@ -324,12 +324,6 @@ class WooSellerAssistant {
 
     public static function pay_invoice( $order_id ) {
         $order = new WC_Order( $order_id );
-        // $paid = get_post_meta( $order_id, '_book_paid' );
-        // $invoice_id = get_post_meta( $order_id, '_book_invoice_id' );
-        // if( !count($invoice_id) ) return;
-        // if( !count($paid) ) return;
-        // if( $paid[0]==0 ) return;
-
         $response = ZohoBooks::create_payment( DataFormat::order_data_to_payment_data( $order ) );
         if( count($response)!=0 ) {
             update_post_meta( $order->get_id(), '_book_paid', 1 );
