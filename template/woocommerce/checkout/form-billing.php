@@ -115,21 +115,15 @@ foreach( $_users as $_user ) {
 			foreach ( $fields as $key => $field ) {
 				
 				if( $key!="billing_company" ) {
-					
-					// if( $key=="billing_country" ) $value = "VE";
-					// else if( $key=="billing_state" ) $value = "VE-F";
-					// else $value = $checkout->get_value( $key );
-
-					// if( $key=="billing_country" || $key=="billing_state" ) $field = array_merge($field, [ "required"=>false, "custom_attributes" => ["disabled" => true] ]);
-					
-					woocommerce_form_field( $key, $field, $checkout->get_value( $key ) );
-				}
-				if( $key=="billing_last_name" ) {
-					woocommerce_form_field( "dni", [
-						"type" => "text",
-						"label" => "DNI",
-						"class" => "form-row form-row-wide"
-					], "" );
+					$new_field = ($key==='billing_email') ? array_merge( $field, [ "custom_attributes" => [ "v-model" => "email"] ]) : $field;
+					woocommerce_form_field( $key, $new_field, $checkout->get_value( $key ) );
+					if( $key=="billing_last_name" ) {
+						woocommerce_form_field( "dni", [
+							"type" => "text",
+							"label" => "DNI",
+							"class" => "form-row form-row-wide"
+						], "" );
+					}
 				}
 			}
 			?>

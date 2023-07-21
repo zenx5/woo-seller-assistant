@@ -6,6 +6,9 @@ require_once 'class-zoho-books.php';
 require_once 'class-second-currency-rates.php';
 require_once 'class-wc-cart-2.php';
 require_once 'class-data-format.php';
+define('CF_DNI', 1);
+define('CF_REFERIDO_POR', 2);
+define('CF_TIPO_SERVICIO', 3);
 
 
 class WooSellerAssistant {
@@ -19,8 +22,8 @@ class WooSellerAssistant {
         update_option('wsa_zoho_refresh_token', '');
         update_option('wsa_zoho_refresh_token_time', '');
         update_option('wsa_zoho_token_error', '0');
-        update_option('wsa_woo_public_client', '');
-        update_option('wsa_woo_private_client', '');
+        // update_option('wsa_woo_public_client', '');
+        // update_option('wsa_woo_private_client', '');
     }
 
     public static function deactivation() {
@@ -35,6 +38,7 @@ class WooSellerAssistant {
         add_action( 'wp_ajax_import_products', [__CLASS__, 'action_import_products']);
         add_action( 'wp_ajax_import_customers', [__CLASS__, 'action_import_customers']);
         add_action( 'wp_ajax_create_invoice', [__CLASS__, 'action_create_invoice']);
+        add_action( 'wp_ajax_create_customer', [__CLASS__, 'action_create_customer']);
         remove_action( 'wp_loaded', array( 'WC_Form_Handler', 'update_cart_action' ), 20 );
         add_action( 'wp_loaded', array( 'WC_Cart_Two', 'update_cart_action' ), 20 );
         add_filter( 'wsa_price_in_cart', [__CLASS__, 'get_price_in_cart'],1,3);
@@ -100,6 +104,61 @@ class WooSellerAssistant {
                 }?>
             </div>
         <?php
+    }
+
+    public static function action_create_customer() {
+        if( !isset($_POST['first_name']) || !isset($_POST['last_name']) ) {
+            return;
+        }
+        $first_name = $_POST['first_name'];
+        $last_name = $_POST['last_name'];
+
+        $data = [
+            "contact_name" => "$first_name $last_name",
+            "contact_type" => "customer",
+            "customer_sub_type" => "individual",
+            "billing_address" => [
+                "attention" => "",
+                "address" => isset($_POST["billing_address_1"]) ? $_POST["billing_address_1"] : "",
+                "street2" => isset($_POST["billing_address_2"]) ? $_POST["billing_address_2"] : "",
+                "state_code" => "",
+                "city" => isset($_POST["billing_city"]) ? $_POST["billing_city"] : "",
+                "state" => isset($_POST["billing_state"]) ? $_POST["billing_state"] : "",
+                "zip" => isset($_POST["billing_postcode"]) ? $_POST["billing_postcode"] : "",
+                "country" => isset($_POST["billing_country"]) ? $_POST["billing_country"] : "",
+                "fax" => "",
+                "phone" => isset($_POST["billing_phone"]) ? $_POST["billing_phone"] : "",
+            ],
+            "shipping_address" => [
+                "attention" => "",
+                "address" => isset($_POST["shipping_address_1"]) ? $_POST["shipping_address_1"] : "",
+                "street2" => isset($_POST["shipping_address_2"]) ? $_POST["shipping_address_2"] : "",
+                "state_code" => "",
+                "city" => isset($_POST["shipping_city"]) ? $_POST["shipping_city"] : "",
+                "state" => isset($_POST["shipping_state"]) ? $_POST["shipping_state"] : "",
+                "zip" => isset($_POST["shipping_postcode"]) ? $_POST["shipping_postcode"] : "",
+                "country" => isset($_POST["shipping_country"]) ? $_POST["shipping_country"] : "",
+                "fax" => "",
+                "phone" => isset($_POST["shipping_phone"]) ? $_POST["shipping_phone"] : "",
+            ],
+            "custom_fields" => [
+                [
+                    "index" => CF_DNI,
+                    "value" => $_POST["dni"]
+                ],
+                // [
+                //     "index" => CF_REFERIDO_POR,
+                //     "value" => $_POST["dni"]
+                // ],
+                [
+                    "index" => CF_TIPO_SERVICIO,
+                    "value" => ["Víveres"]
+                ],
+            ]
+        ];
+
+        echo json_encode( ZohoBooks::create_customer($data) );
+        die();
     }
 
     public static function action_import_customers() {
@@ -483,6 +542,7 @@ class WooSellerAssistant {
     }
 
     public static function action_update_config() {
+        $user_id = isset($_POST['user_id']) ? $_POST['user_id'] : get_current_user_id();
         if( isset($_POST['wsa_rate_usd']) ) {
             WooSellerAssistant::set_rate_usd( $_POST['wsa_rate_usd'] );
         }
@@ -499,10 +559,10 @@ class WooSellerAssistant {
             update_option('wsa_zoho_client_secret', $_POST['wsa_zoho_client_secret']);
         }
         if( isset($_POST['wsa_woo_public_client']) ) {
-            update_option('wsa_woo_public_client', $_POST['wsa_woo_public_client']);
+            update_option('wsa_woo_public_client_'.$user_id, $_POST['wsa_woo_public_client']);
         }
         if( isset($_POST['wsa_woo_private_client']) ) {
-            update_option('wsa_woo_private_client', $_POST['wsa_woo_private_client']);
+            update_option('wsa_woo_private_client_'.$user_id, $_POST['wsa_woo_private_client']);
         }
         echo 1;
         die();

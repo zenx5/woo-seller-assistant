@@ -1,10 +1,10 @@
 <?php
-    $public_client = get_option('wsa_woo_public_client','');
-    $private_client = get_option('wsa_woo_private_client','');
+    $user_id = get_current_user_id();
+    $public_client = get_option('wsa_woo_public_client_'.$user_id,'');
+    $private_client = get_option('wsa_woo_private_client_'.$user_id,'');
     $token = "Basic ".base64_encode("$public_client:$private_client");
 ?>
     <script>
-        jQuery('#billing_email').attr('v-model','email')
         const { createApp } = Vue
         createApp({
             data(){
@@ -24,17 +24,19 @@
                             String(customer.data.dni).toLowerCase().includes( this.search.toLowerCase() )
                         )
                     })
-                },
-                isValidEmail(){
-                    return wp_customers.findIndex( customer => customer.data.user_email===email )===-1
                 }
             },
             mounted() {
                 this.cleanFields()
             },
             methods: {
+                isValidEmail(){
+                    const index = wp_customers.findIndex( customer => customer.data.user_email===this.email )
+                    console.log(index)
+                    return index===-1
+                },
                 createUser(){
-                    if( this.isValidEmail() ) {
+                    if( !this.isValidEmail() ) {
                         alert('El email pertenece a otro usuario')
                         return
                     }
@@ -81,9 +83,57 @@
                         })
                     })
                     .then( response => response.json() )
-                    .then( result => {
-                        console.log( result )
-                        document.location.reload()
+                    .then( customer => {
+                        if( customer.id ) {
+                            const data = {
+                                email: customer.email,
+                                first_name: customer.first_name,
+                                dni: document.querySelector('#dni')?.value,
+                                last_name: customer.last_name,
+                                billing_first_name: customer.billing.first_name,
+                                billing_last_name: customer.billing.last_name,
+                                billing_company: customer.billing.company,
+                                billing_address_1: customer.billing.address_1,
+                                billing_address_2: customer.billing.address_2,
+                                billing_city: customer.billing.city,
+                                billing_state: customer.billing.state,
+                                billing_postcode: customer.billing.postcode,
+                                billing_country: customer.billing.country,
+                                billing_email: customer.billing.email,
+                                billing_phone: customer.billing.phone,
+                                shipping_first_name: customer.shipping.first_name,
+                                shipping_last_name: customer.shipping.last_name,
+                                shipping_company: customer.shipping.company,
+                                shipping_address_1: customer.shipping.address_1,
+                                shipping_address_2: customer.shipping.address_2,
+                                shipping_city: customer.shipping.city,
+                                shipping_state: customer.shipping.state,
+                                shipping_postcode: customer.shipping.postcode,
+                                shipping_country: customer.shipping.country
+                            }
+                            const queryData = Object.keys(data).map( key => `${key}=${data[key]}`)
+                            fetch('https://wp.test/wp-admin/admin-ajax.php', {
+                                method:'post',
+                                headers:{
+                                    'Content-Type':'application/x-www-form-urlencoded'
+                                },
+                                body:[
+                                    `action=create_customer`,
+                                    ...queryData
+                                ].join('&')
+                            })
+                                .then( response2 => response2.json() )
+                                .then( result => {
+                                    if( result ) {
+                                        if( sessionStorage.getItem('eu_debug') ) {
+                                            console.log( customer )
+                                            console.log( result )
+                                        } else {
+                                            document.location.reload();
+                                        }
+                                    }
+                                } )
+                        }
                     } )
 
                 },

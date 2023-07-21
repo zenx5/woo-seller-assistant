@@ -1,4 +1,5 @@
 <?php 
+    $user_id = get_current_user_id();
     $tab = isset($_GET['tab']) ? $_GET['tab'] : 1;
     $code = isset($_GET['code']) ? $_GET['code'] : '';
     $rate = WooSellerAssistant::get_rate_usd();
@@ -7,8 +8,8 @@
     $organization_id = get_option('wsa_zoho_book_organization', '');
     $access_token = get_option( 'wsa_zoho_access_token', '' );
     $refresh_token = get_option( 'wsa_zoho_refresh_token', '' );
-    $woo_public_client = get_option('wsa_woo_public_client', '');
-    $woo_private_client = get_option('wsa_woo_private_client', '');
+    $woo_public_client = get_option('wsa_woo_public_client_'.$user_id, '');
+    $woo_private_client = get_option('wsa_woo_private_client_'.$user_id, '');
     if($access_token!='') {
         echo "<div style='display:inline-block; font-weight:bold;top:10px; padding:4px; color:white; background-color:green; margin:5px; border-radius:10px;'>active</div>";
     } else {
@@ -47,7 +48,6 @@
     <li class="nav-item <?=$tab==1?'active':''?>" data-tab="1">Bodega</li>
     <li class="nav-item <?=$tab==2?'active':''?>" data-tab="2">Zoho</li>
     <li class="nav-item <?=$tab==3?'active':''?>" data-tab="3">WooCommerce</li>
-    <!-- <li class="nav-item <?=$tab==4?'active':''?>" data-tab="4">Facturas</li> -->
 </ul>
 <?php for($i=1; $i<=3; $i++): ?>
     <div id="tab-<?=$i?>" class="tab-content <?=$tab==$i?'active':''?>">
@@ -100,7 +100,13 @@
                 ].join('&')
             })
             const result = await response.text();
-            if( result==1 ) document.location.reload();
+            if( result ) {
+                if( sessionStorage.getItem('eu_debug') ) {
+                  console.log( result )  
+                } else {
+                    document.location.reload();
+                }
+            }
         })
 </script>
 <?php if( true || $refresh_token=='' ): ?>
@@ -118,7 +124,13 @@
                 ].join('&')
             })
             const result = await response.text();
-            if( result ) document.location.reload();
+            if( result ) {
+                if( sessionStorage.getItem('eu_debug') ) {
+                  console.log( result )  
+                } else {
+                    document.location.reload();
+                }
+            }
         })
     </script>
 <?php endif; ?>
