@@ -1,5 +1,7 @@
 <?php
 
+defined( 'ABSPATH' ) || exit;
+
 class ZohoApi {
 
     public static function generate_code( $code, $client_id, $client_secret ) {

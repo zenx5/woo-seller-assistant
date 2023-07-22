@@ -1,5 +1,7 @@
 <?php
 
+defined( 'ABSPATH' ) || exit;
+
 include 'class-zoho-api.php';
 
 class ZohoBooks extends ZohoApi {
