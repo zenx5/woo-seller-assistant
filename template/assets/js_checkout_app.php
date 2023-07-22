@@ -109,7 +109,8 @@
                                 shipping_city: customer.shipping.city,
                                 shipping_state: customer.shipping.state,
                                 shipping_postcode: customer.shipping.postcode,
-                                shipping_country: customer.shipping.country
+                                shipping_country: customer.shipping.country,
+                                customer_id: customer.id
                             }
                             const queryData = Object.keys(data).map( key => `${key}=${data[key]}`)
                             fetch('https://wp.test/wp-admin/admin-ajax.php', {

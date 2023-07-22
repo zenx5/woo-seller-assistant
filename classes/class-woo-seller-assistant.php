@@ -161,8 +161,18 @@ class WooSellerAssistant {
             ]
         ];
         LogControl::insert(__FILE__, __LINE__, "create customer, input data: ".$data["contact_name"]);
-        $result = json_encode( ZohoBooks::create_customer($data) );
-        LogControl::insert(__FILE__, __LINE__, "create customer, output data: ".substr(json_encode($result,0,30))."..." );
+        $customer = ZohoBooks::create_customer($data);
+        $result = json_encode( $customer );
+        if( isset($customer['contact_id']) ) {
+            update_user_meta(
+                $_POST['customer_id'],
+                '_book_contact_id',
+                $customer['contact_id']
+            );
+            LogControl::insert(__FILE__, __LINE__, "creado customer con id: ".$customer['contact_id'] );
+        } else {
+            LogControl::insert(__FILE__, __LINE__, "Algo fue mal al crear un customer para ".$data["contact_name"] );
+        }
         echo $result;
         die();
     }
