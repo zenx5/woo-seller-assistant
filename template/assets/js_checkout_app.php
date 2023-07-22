@@ -145,9 +145,6 @@
                         if( field ) {
                             const item = jQuery(`#${key}`)
                             item.val('')
-                            if( 'billing_email' === key ) {
-                                item.attr('disabled', false)
-                            }
                             if( item.is('select') ) {
                                 item.change()
                             }
@@ -166,7 +163,6 @@
                                 const [first, last] = customer.data.display_name.split(' ')
                                 if( 'billing_email' === key ) {
                                     item.val( customer.billing[key] || customer.data.user_email )
-                                    item.attr('disabled', true)
                                 }
                                 else if( 'billing_first_name' === key ) {
                                     item.val( customer.billing[key] || first )

@@ -102,12 +102,12 @@ class WooSellerAssistant {
                                         ].join('&')
                                     })
                                         .then( response => response.json() )
-                                        .then( json => document.location.reload )
+                                        .then( json => document.location.reload() )
                                 })
                         </script>
                     <?php endif; ?>
                 </p>
-                <?php if( $error ){
+                <?php if( $error && !$invoice_id ){
                     echo "<p>$error</p>";
                 }?>
             </div>
@@ -160,9 +160,9 @@ class WooSellerAssistant {
                 // ],
             ]
         ];
-        LogControl::insert(__FILE__, __LINE__, "create customer, input data: ".json_encode($data));
+        LogControl::insert(__FILE__, __LINE__, "create customer, input data: ".$data["contact_name"]);
         $result = json_encode( ZohoBooks::create_customer($data) );
-        LogControl::insert(__FILE__, __LINE__, "create customer, output data: $result");
+        LogControl::insert(__FILE__, __LINE__, "create customer, output data: ".substr(json_encode($result,0,30))."..." );
         echo $result;
         die();
     }
@@ -395,7 +395,7 @@ class WooSellerAssistant {
         $response = ZohoBooks::create_payment( DataFormat::order_data_to_payment_data( $order ) );
         if( count($response)!=0 ) {
             update_post_meta( $order->get_id(), '_book_paid', 1 );
-            LogControl::insert(__FILE__, __LINE__, "Pagada orden $order_id, respuesta ".json_encode( $response ));
+            LogControl::insert(__FILE__, __LINE__, "Pagada orden $order_id, respuesta ".substr(json_encode( $response ),0,30)."...");
         }
     }
 
