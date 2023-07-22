@@ -21,6 +21,12 @@ class SC_Rates {
         dbDelta($sql);
     }
 
+    public static function drop_table() { 
+        $sql = "drop table second_currency_rates";
+        require_once(ABSPATH.'wp-admin/includes/upgrade.php');
+        dbDelta($sql);
+    }
+
     public static function get_row_at( $currency="USD", $current_date = null ) {
         global $wpdb;
         $current_date = $current_date ? $current_date : date("Y-m-d");
