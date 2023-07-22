@@ -1,5 +1,7 @@
 <?php
 
+defined( 'ABSPATH' ) || exit;
+
 include 'class-zoho-api.php';
 
 class ZohoBooks extends ZohoApi {
@@ -27,6 +29,29 @@ class ZohoBooks extends ZohoApi {
         curl_close($ch);
 
         return ( $response['code']==0 ) ? $response['invoice'] : $response;
+    }
+
+    public static function create_customer ( $data ) {
+        $organization_id = get_option('wsa_zoho_book_organization', '');
+        $response = self::get_token();
+        if( $response["error"]==1 ) return ["error"=>"not token"];
+        $access_token = $response["access_token"];
+
+        $url = "https://www.zohoapis.com/books/v3/contacts?organization_id=$organization_id";
+        $headers = [
+            'Authorization:  Zoho-oauthtoken '.$access_token,
+            'content-type: application/json'
+        ];
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+        $response = json_decode( curl_exec($ch), true );
+        curl_close($ch);
+
+        return ( $response['code']==0 ) ? $response['contact'] : $response;
     }
 
     public static function create_payment ( $data ) {
@@ -74,25 +99,26 @@ class ZohoBooks extends ZohoApi {
         return $response['code']==0;
     }
 
-    public static function list_all_contacts() {
-        return self::get_single_resource('contacts');
+    public static function list_all_contacts($id = null) {
+        return self::get_single_resource('contacts', $id, 'contact');
     }
 
-    public static function list_all_items() {
-        return self::get_single_resource('items');
+    public static function list_all_items($id = null) {
+        return self::get_single_resource('items', $id);
     }
 
-    public static function list_all_invoices() {
-        return self::get_single_resource('invoices');
+    public static function list_all_invoices($id = null) {
+        return self::get_single_resource('invoices', $id);
     }
 
-    public static function get_single_resource($resource) {
+    public static function get_single_resource($resource, $id = null, $singular_resource = '' ) {
         $organization_id = get_option('wsa_zoho_book_organization', '');
         $response = self::get_token();
         if( $response["error"]==1 ) return [];
         $access_token = $response["access_token"];
 
-        $url = self::$baseurl."$resource?organization_id=$organization_id";
+        $url = $id ? self::$baseurl."$resource/$id?organization_id=$organization_id" : self::$baseurl."$resource?organization_id=$organization_id";
+        $key = $id ? ( $singular_resource=='' ? $resource : $singular_resource ) : $resource;
         $headers = [
             'Authorization:  Zoho-oauthtoken '.$access_token
         ];
@@ -103,7 +129,7 @@ class ZohoBooks extends ZohoApi {
         $response = json_decode( curl_exec($ch), true );
         curl_close($ch);
 
-        return ( $response['code']==0 ) ? $response[$resource] : [];
+        return ( $response['code']==0 ) ? $response[$key] : $response;
     }
 
 }

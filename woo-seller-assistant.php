@@ -19,5 +19,6 @@
  
  register_activation_hook(__FILE__, [$nameclass, 'activation']);
  register_deactivation_hook(__FILE__, [$nameclass, 'deactivation']);
+ register_uninstall_hook(__FILE__, [$nameclass, 'uninstall']);
 
  add_action('init', [$nameclass, 'init']);

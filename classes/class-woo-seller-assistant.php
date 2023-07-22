@@ -6,12 +6,14 @@ require_once 'class-zoho-books.php';
 require_once 'class-second-currency-rates.php';
 require_once 'class-wc-cart-2.php';
 require_once 'class-data-format.php';
+require_once 'class-log-control.php';
 
 
 class WooSellerAssistant {
 
     public static function activation() {
         SC_Rates::create_table();
+        LogControl::create_table();
         $user_roles = get_option('wp_user_roles');
         $user_roles['shop_manager']['capabilities']['create_users'] = true;
         update_option('wp_user_roles',  $user_roles );
@@ -19,29 +21,39 @@ class WooSellerAssistant {
         update_option('wsa_zoho_refresh_token', '');
         update_option('wsa_zoho_refresh_token_time', '');
         update_option('wsa_zoho_token_error', '0');
-        update_option('wsa_woo_public_client', '');
-        update_option('wsa_woo_private_client', '');
+        LogControl::insert(__FILE__, __LINE__, 'activado plugin');
+        // update_option('wsa_woo_public_client', '');
+        // update_option('wsa_woo_private_client', '');
     }
 
     public static function deactivation() {
-        
+        $user_roles = get_option('wp_user_roles');
+        $user_roles['shop_manager']['capabilities']['create_users'] = false;
+        update_option('wp_user_roles',  $user_roles );
+        LogControl::insert(__FILE__, __LINE__, 'desactivado plugin');
+    }
+
+    public static function uninstall() {
+        SC_Rates::drop_table();
+        LogControl::drop_table();
     }
 
     public static function init() {
         add_filter( 'woocommerce_locate_template', [__CLASS__, 'template_replace'],1,3);
         add_action( 'admin_menu', [__CLASS__, 'admin_menu']);
-        add_action( 'wp_ajax_update_config', [__CLASS__, 'update_config']);
-        add_action( 'wp_ajax_generate_code', [__CLASS__, 'generate_code']);
-        add_action( 'wp_ajax_import_products', [__CLASS__, 'import_products']);
-        add_action( 'wp_ajax_import_customers', [__CLASS__, 'import_customers']);
+        add_action( 'wp_ajax_update_config', [__CLASS__, 'action_update_config']);
+        add_action( 'wp_ajax_generate_code', [__CLASS__, 'action_generate_code']);
+        add_action( 'wp_ajax_import_products', [__CLASS__, 'action_import_products']);
+        add_action( 'wp_ajax_import_customers', [__CLASS__, 'action_import_customers']);
         add_action( 'wp_ajax_create_invoice', [__CLASS__, 'action_create_invoice']);
+        add_action( 'wp_ajax_create_customer', [__CLASS__, 'action_create_customer']);
         remove_action( 'wp_loaded', array( 'WC_Form_Handler', 'update_cart_action' ), 20 );
         add_action( 'wp_loaded', array( 'WC_Cart_Two', 'update_cart_action' ), 20 );
         add_filter( 'wsa_price_in_cart', [__CLASS__, 'get_price_in_cart'],1,3);
         add_filter( 'woocommerce_checkout_customer_id', [__CLASS__, 'set_order_customer_id']);
         add_action( 'woocommerce_checkout_create_order_line_item', [__CLASS__, 'update_item_order'], 1, 4);
         add_action( 'woocommerce_checkout_order_created', [__CLASS__, 'order_created'] );
-        add_action( 'woocommerce_checkout_order_created', [__CLASS__, 'update_address'] );
+        add_action( 'woocommerce_checkout_order_created', [__CLASS__, 'update_user_data'] );
         add_action( 'woocommerce_order_status_completed', [__CLASS__, 'pay_invoice']);
         add_action( 'woocommerce_admin_order_data_after_order_details', [__CLASS__, 'book_details']);
         add_action( 'wp_head', [__CLASS__, 'js_head']);
@@ -90,24 +102,87 @@ class WooSellerAssistant {
                                         ].join('&')
                                     })
                                         .then( response => response.json() )
-                                        .then( json => document.location.reload )
+                                        .then( json => document.location.reload() )
                                 })
                         </script>
                     <?php endif; ?>
                 </p>
-                <?php if( $error ){
+                <?php if( $error && !$invoice_id ){
                     echo "<p>$error</p>";
                 }?>
             </div>
         <?php
     }
 
-    public static function import_customers() {
+    public static function action_create_customer() {
+        if( !isset($_POST['first_name']) || !isset($_POST['last_name']) ) {
+            return;
+        }
+        $first_name = $_POST['first_name'];
+        $last_name = $_POST['last_name'];
+
+        $data = [
+            "contact_name" => "$first_name $last_name",
+            "contact_type" => "customer",
+            "customer_sub_type" => "individual",
+            "billing_address" => [
+                "attention" => "",
+                "address" => isset($_POST["billing_address_1"]) ? $_POST["billing_address_1"] : "",
+                "street2" => isset($_POST["billing_address_2"]) ? $_POST["billing_address_2"] : "",
+                "state_code" => "",
+                "city" => isset($_POST["billing_city"]) ? $_POST["billing_city"] : "",
+                "state" => isset($_POST["billing_state"]) ? $_POST["billing_state"] : "",
+                "zip" => isset($_POST["billing_postcode"]) ? $_POST["billing_postcode"] : "",
+                "country" => isset($_POST["billing_country"]) ? $_POST["billing_country"] : "",
+                "fax" => "",
+                "phone" => isset($_POST["billing_phone"]) ? $_POST["billing_phone"] : "",
+            ],
+            "shipping_address" => [
+                "attention" => "",
+                "address" => isset($_POST["shipping_address_1"]) ? $_POST["shipping_address_1"] : "",
+                "street2" => isset($_POST["shipping_address_2"]) ? $_POST["shipping_address_2"] : "",
+                "state_code" => "",
+                "city" => isset($_POST["shipping_city"]) ? $_POST["shipping_city"] : "",
+                "state" => isset($_POST["shipping_state"]) ? $_POST["shipping_state"] : "",
+                "zip" => isset($_POST["shipping_postcode"]) ? $_POST["shipping_postcode"] : "",
+                "country" => isset($_POST["shipping_country"]) ? $_POST["shipping_country"] : "",
+                "fax" => "",
+                "phone" => isset($_POST["shipping_phone"]) ? $_POST["shipping_phone"] : "",
+            ],
+            "custom_fields" => [
+                [
+                    "label" => "DNI",// intval( CF_DNI ),
+                    "value" => $_POST["dni"]
+                ],
+                // [
+                //     "label" => "cf_tipo_de_servicio", //intval( CF_TIPO_SERVICIO ),
+                //     "value" => ["Víveres"]
+                // ],
+            ]
+        ];
+        LogControl::insert(__FILE__, __LINE__, "create customer, input data: ".$data["contact_name"]);
+        $customer = ZohoBooks::create_customer($data);
+        $result = json_encode( $customer );
+        if( isset($customer['contact_id']) ) {
+            update_user_meta(
+                $_POST['customer_id'],
+                '_book_contact_id',
+                $customer['contact_id']
+            );
+            LogControl::insert(__FILE__, __LINE__, "creado customer con id: ".$customer['contact_id'] );
+        } else {
+            LogControl::insert(__FILE__, __LINE__, "Algo fue mal al crear un customer para ".$data["contact_name"] );
+        }
+        echo $result;
+        die();
+    }
+
+    public static function action_import_customers() {
         $response = [
             "new" => [],
             "update" => [],
-            "log" => []
         ];
+        $log = "";
         $contacts = ZohoBooks::list_all_contacts();
         foreach( $contacts as $contact ) {
             if( $contact['contact_type']=='customer' ) {
@@ -141,7 +216,7 @@ class WooSellerAssistant {
                         $contact['contact_id']
                     );
                     $response["new"][] = $contact;
-                    $response["log"][] = "User create with ID $user_id";
+                    $log .= "User create with ID $user_id, ";
                 } else {
                     $username = explode('@', $contact['email'])[0];
                     $user_id = wp_insert_user([
@@ -172,26 +247,26 @@ class WooSellerAssistant {
                         $contact['contact_id']
                     );
                     $response["update"][] = $contact;
-                    $response["log"][] = "User update with ID $user_id";
+                    $log .= "User update with ID $user_id, ";
                 }
             }
         }
+        LogControl::insert(__FILE__, __LINE__, $log);
         echo json_encode( $response );
         die();
     }
 
-    public static function import_products() {
+    public static function action_import_products() {
         $response = [
             "new" => [],
             "update" => [],
-            "log" => []
         ];
+        $log = "";
         $items = ZohoBooks::list_all_items();
         foreach( $items as $item ) {
             if( $item['product_type']=='goods' && $item['status']=='active' ) {
                 $sku = ($item['sku']!='') ? $item['sku'] : 'sku-'.$item['account_id'].'-'.$item['item_id'];
                 $product_id = wc_get_product_id_by_sku($sku);
-                $response["log"][] = "Product ID: $product_id";
                 if( $product_id ) {
                     $image_document_id = $item['image_document_id'];
                     $organization_id = get_option('wsa_zoho_book_organization', '');
@@ -200,8 +275,6 @@ class WooSellerAssistant {
                         $url_image = "https://books.zoho.com/api/v3/documents/$image_document_id?organization_id=$organization_id&inline=true";    
                     }
                     $product = new WC_Product( $product_id );
-                    $response["log"][] = "Price compare: ".$product->get_regular_price()."!=".$item['rate']."?";
-                    $response["log"][] = "Name compare: ".$product->get_name()."!=".$item['name']."?";
                     if( $product->get_regular_price()!=$item['rate'] || $product->get_name()!=$item['name'] ) {
                         $product->set_regular_price( $item['rate'] );
                         $product->set_name( $item['name'] );
@@ -227,7 +300,8 @@ class WooSellerAssistant {
                             '_book_unit',
                             $item['unit']
                         );
-                        $response["log"][] = "Result save: $id";
+                        
+                        $log .= "Result save: $id, ";
                         $response["update"][] = $item;
                     }
                 } else {
@@ -260,16 +334,17 @@ class WooSellerAssistant {
                         '_book_unit',
                         $item['unit']
                     );
-                    $response["log"][] = "Result save: $id";
+                    $log .= "Result save: $id, ";
                     $response["new"][] = $item;
                 }
             }
         }
+        LogControl::insert(__FILE__, __LINE__, $log);
         echo json_encode( $response );
         die();
     }
 
-    public static function generate_code() {
+    public static function action_generate_code() {
         if( isset($_POST['code']) ) {
             $code = $_POST['code'];
             $client_id = get_option('wsa_zoho_client_id', '');
@@ -277,17 +352,20 @@ class WooSellerAssistant {
             $refresh_token = ZohoBooks::generate_code( $code, $client_id, $client_secret );
             if( !$refresh_token ) {
                 update_option('wsa_zoho_token_error', '1');
+                LogControl::insert(__FILE__, __LINE__, "Error al crear Refresh Token");
                 die('0');
             }
             update_option( 'wsa_zoho_refresh_token', $refresh_token );
             $access_token = ZohoBooks::refresh_token( $refresh_token, $client_id, $client_secret );
             if( !$access_token ) {
                 update_option('wsa_zoho_token_error', '1');
+                LogControl::insert(__FILE__, __LINE__, "Error al crear Access Token");
                 die('0');
             }
             update_option( 'wsa_zoho_access_token', $access_token );
             update_option( 'wsa_zoho_access_token_time', date('Y-m-d H:i:s') );
             update_option('wsa_zoho_token_error', '0');
+            LogControl::insert(__FILE__, __LINE__, "Aprobado este codigo $code => generado refresh token $access_token");
             echo "Aprobado este codigo $code <br/> generado refresh token $access_token";
             die();
         }
@@ -324,22 +402,14 @@ class WooSellerAssistant {
 
     public static function pay_invoice( $order_id ) {
         $order = new WC_Order( $order_id );
-        // $paid = get_post_meta( $order_id, '_book_paid' );
-        // $invoice_id = get_post_meta( $order_id, '_book_invoice_id' );
-        // if( !count($invoice_id) ) return;
-        // if( !count($paid) ) return;
-        // if( $paid[0]==0 ) return;
-
         $response = ZohoBooks::create_payment( DataFormat::order_data_to_payment_data( $order ) );
         if( count($response)!=0 ) {
             update_post_meta( $order->get_id(), '_book_paid', 1 );
+            LogControl::insert(__FILE__, __LINE__, "Pagada orden $order_id, respuesta ".substr(json_encode( $response ),0,30)."...");
         }
     }
 
-    public static function update_address( $order ){
-        $first_name = $order->get_billing_first_name();
-        $last_name = $order->get_billing_last_name();
-        $email = $order->get_billing_email();
+    public static function update_user_data( $order ){
         $billing_address_1 = $order->get_billing_address_1();
         $billing_address_2 = $order->get_billing_address_2();
         $billing_city = $order->get_billing_city();
@@ -349,25 +419,18 @@ class WooSellerAssistant {
         $billing_phone = $order->get_billing_phone();
 
         $user = get_user_by( 'email', $email );
-        $user_id = wp_insert_user([
-            "ID" => $user->ID,
-            "first_name" => $first_name,
-            "last_name" => $last_name,
-            "user_nicename" => $first_name."-".$last_name,
-            "display_name" => $first_name." ".$last_name,
-            "billing_address_1" => $billing_address_1,
-            "billing_address_2" => $billing_address_2,
-            "billing_city" => $billing_city,
-            "billing_state" => $billing_state,
-            "billing_postcode" => $billing_postcode,
-            "billing_country" => $billing_country,
-            "billing_phone" => $billing_phone
-        ]);
-        // update_user_meta(
-        //     $user_id,
-        //     '_book_cf_dni',
-        //     $contact['cf_dni']
-        // );
+        if( $user ) {
+            $user_id = wp_insert_user([
+                "ID" => $user->ID,
+                "billing_address_1" => $billing_address_1,
+                "billing_address_2" => $billing_address_2,
+                "billing_city" => $billing_city,
+                "billing_state" => $billing_state,
+                "billing_postcode" => $billing_postcode,
+                "billing_country" => $billing_country,
+                "billing_phone" => $billing_phone
+            ]);
+        }
     }
 
     public static function order_created( $order ){
@@ -379,6 +442,7 @@ class WooSellerAssistant {
         
         $invoice = ZohoBooks::create_invoice( DataFormat::order_to_data_invoice( $order ) );
         if( isset($invoice["invoice_id"]) ) {
+            LogControl::insert(__FILE__, __LINE__, "Creada factura ".$invoice['invoice_id']." para la orden ".$order->get_id());
             update_post_meta(
                 $order->get_id(),
                 '_book_invoice_id',
@@ -390,6 +454,7 @@ class WooSellerAssistant {
                 0
             );
         } else {
+            LogControl::insert(__FILE__, __LINE__, "No se pudo crear factura para la orden ".$order->get_id() );
             update_post_meta(
                 $order->get_id(),
                 '_book_error',
@@ -468,12 +533,14 @@ class WooSellerAssistant {
     }
 
     public static function set_rate_usd( $value = 1 ) {
+        $id = get_current_user_id();
         SC_Rates::new_rate([
             "currency" => "USD",
             "value" => $value,
             "target" => "[]",
             "created_at" => date("Y-m-d H:i:s")
         ]);
+        LogControl::insert(__FILE__, __LINE__, "Acutalizada tasa por usuario al nuevo valor: $value");
     }
 
     public static function get_rate_usd($currency = "USD", $date = null) {
@@ -498,7 +565,8 @@ class WooSellerAssistant {
         return $term_cart[0]->term_id;
     }
 
-    public static function update_config() {
+    public static function action_update_config() {
+        $user_id = isset($_POST['user_id']) ? $_POST['user_id'] : get_current_user_id();
         if( isset($_POST['wsa_rate_usd']) ) {
             WooSellerAssistant::set_rate_usd( $_POST['wsa_rate_usd'] );
         }
@@ -515,10 +583,10 @@ class WooSellerAssistant {
             update_option('wsa_zoho_client_secret', $_POST['wsa_zoho_client_secret']);
         }
         if( isset($_POST['wsa_woo_public_client']) ) {
-            update_option('wsa_woo_public_client', $_POST['wsa_woo_public_client']);
+            update_option('wsa_woo_public_client_'.$user_id, $_POST['wsa_woo_public_client']);
         }
         if( isset($_POST['wsa_woo_private_client']) ) {
-            update_option('wsa_woo_private_client', $_POST['wsa_woo_private_client']);
+            update_option('wsa_woo_private_client_'.$user_id, $_POST['wsa_woo_private_client']);
         }
         echo 1;
         die();
