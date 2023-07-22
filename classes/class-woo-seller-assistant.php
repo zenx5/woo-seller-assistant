@@ -143,17 +143,13 @@ class WooSellerAssistant {
             ],
             "custom_fields" => [
                 [
-                    "index" => CF_DNI,
+                    "label" => "DNI",// intval( CF_DNI ),
                     "value" => $_POST["dni"]
                 ],
                 // [
-                //     "index" => CF_REFERIDO_POR,
-                //     "value" => $_POST["dni"]
+                //     "label" => "cf_tipo_de_servicio", //intval( CF_TIPO_SERVICIO ),
+                //     "value" => ["Víveres"]
                 // ],
-                [
-                    "index" => CF_TIPO_SERVICIO,
-                    "value" => ["Víveres"]
-                ],
             ]
         ];
 
