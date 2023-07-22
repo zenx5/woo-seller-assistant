@@ -1,28 +1,27 @@
+<?php
+    function get_user_name($id) {
+        $user = get_user_by('ID', $id);
+        if( $user ) {
+            return $user->data->display_name;
+        }
+        return $id;
+    }
+?>
 <div style="padding:20px 0px">
     <table>
         <tr>
-            <th style="width:200px;">Public Client: </th>
-            <td>
-                <input
-                    type="text"
-                    id="wsa_woo_public_client"
-                    name="wsa_woo_public_client"
-                    value="<?=$woo_public_client?>"/>
-            </td>
+            <th>ID</th>
+            <th>Mensaje</th>
+            <th>Usuario</th>
+            <th>Ubicacion</th>
         </tr>
-        <tr>
-            <th style="width:200px;">Private Client: </th>
-            <td>
-                <input
-                    type="text"
-                    id="wsa_woo_private_client"
-                    name="wsa_woo_private_client"
-                    value="<?=$woo_private_client?>"/>
-            </td>
-        </tr>
-        
+        <?php foreach($logs as $log):?>
+            <tr style="border:1px solid black;">
+                <td style="border:1px solid black; padding:5px 40px;"><?=$log->id?></td>
+                <td style="border:1px solid black; padding:5px 40px;"><?=$log->message?></td>
+                <td style="border:1px solid black; padding:5px 40px;"><?=get_user_name($log->user_id)?></td>
+                <td style="border:1px solid black; padding:5px 40px;">"<?=$log->file?>" en Linea <?=$log->line?></td>
+            </tr>
+        <?php endforeach; ?>
     </table>
-    <button type="button" style="margin-top:20px; padding:5px 20px;" class="save-config button">Guardar</button>
-    <button style="margin-top:20px; padding:5px 20px;" class="button btn-import-from-zoho" data-action="import_products">Importar Productos</button>
-    <button style="margin-top:20px; padding:5px 20px;" class="button btn-import-from-zoho" data-action="import_customers">Importar Clientes</button>
 </div>

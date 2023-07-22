@@ -1,5 +1,7 @@
 <?php 
-    $user_id = get_current_user_id();
+    $logs = LogControl::get_all();
+    $user = wp_get_current_user();
+    $user_id = $user->ID;
     $tab = isset($_GET['tab']) ? $_GET['tab'] : 1;
     $code = isset($_GET['code']) ? $_GET['code'] : '';
     $rate = WooSellerAssistant::get_rate_usd();
@@ -11,9 +13,12 @@
     $woo_public_client = get_option('wsa_woo_public_client_'.$user_id, '');
     $woo_private_client = get_option('wsa_woo_private_client_'.$user_id, '');
     if($access_token!='') {
+        echo "<script>";
+        // echo "console.log(".json_encode( ZohoBooks::list_all_contacts() ).")";
+        echo "</script>";
         echo "<div style='display:inline-block; font-weight:bold;top:10px; padding:4px; color:white; background-color:green; margin:5px; border-radius:10px;'>active</div>";
     } else {
-        echo "<div style='display:inline-block; font-weight:bold;top:10px; padding:4px; color:white; background-color:red; margin:5px; border-radius:10px;'>inactive</div>";
+        echo "<div style='display:inline-block; font-weight:bold;top:10px; padding:4px; color:white; background-color:red; margin:5px; border-radius:10px;'>inactive token</div>";
     }
     
 ?>
@@ -46,10 +51,13 @@
 <h1>Configuracion</h1>
 <ul class="nav-container">
     <li class="nav-item <?=$tab==1?'active':''?>" data-tab="1">Bodega</li>
-    <li class="nav-item <?=$tab==2?'active':''?>" data-tab="2">Zoho</li>
-    <li class="nav-item <?=$tab==3?'active':''?>" data-tab="3">WooCommerce</li>
+    <li class="nav-item <?=$tab==2?'active':''?>" data-tab="2">WooCommerce</li>
+    <?php if( in_array( 'administrator', $user->roles) ) : ?>
+        <li class="nav-item <?=$tab==3?'active':''?>" data-tab="3">Log</li>
+        <li class="nav-item <?=$tab==4?'active':''?>" data-tab="4">Zoho</li>
+    <?php endif; ?>
 </ul>
-<?php for($i=1; $i<=3; $i++): ?>
+<?php for($i=1; $i<=4; $i++): ?>
     <div id="tab-<?=$i?>" class="tab-content <?=$tab==$i?'active':''?>">
         <?php include 'tab'.$i.'.php'; ?>
     </div>
