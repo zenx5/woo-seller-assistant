@@ -6,15 +6,14 @@ require_once 'class-zoho-books.php';
 require_once 'class-second-currency-rates.php';
 require_once 'class-wc-cart-2.php';
 require_once 'class-data-format.php';
-define('CF_DNI', 1);
-define('CF_REFERIDO_POR', 2);
-define('CF_TIPO_SERVICIO', 3);
+require_once 'class-log-control.php';
 
 
 class WooSellerAssistant {
 
     public static function activation() {
         SC_Rates::create_table();
+        LogControl::create_table();
         $user_roles = get_option('wp_user_roles');
         $user_roles['shop_manager']['capabilities']['create_users'] = true;
         update_option('wp_user_roles',  $user_roles );
@@ -22,12 +21,21 @@ class WooSellerAssistant {
         update_option('wsa_zoho_refresh_token', '');
         update_option('wsa_zoho_refresh_token_time', '');
         update_option('wsa_zoho_token_error', '0');
+        LogControl::insert(__FILE__, __LINE__, 'activado plugin');
         // update_option('wsa_woo_public_client', '');
         // update_option('wsa_woo_private_client', '');
     }
 
     public static function deactivation() {
-        
+        $user_roles = get_option('wp_user_roles');
+        $user_roles['shop_manager']['capabilities']['create_users'] = false;
+        update_option('wp_user_roles',  $user_roles );
+        LogControl::insert(__FILE__, __LINE__, 'desactivado plugin');
+    }
+
+    public static function uninstall() {
+        SC_Rates::drop_table();
+        LogControl::drop_table();
     }
 
     public static function init() {
@@ -152,8 +160,10 @@ class WooSellerAssistant {
                 // ],
             ]
         ];
-
-        echo json_encode( ZohoBooks::create_customer($data) );
+        LogControl::insert(__FILE__, __LINE__, "create customer, input data: ".json_encode($data));
+        $result = json_encode( ZohoBooks::create_customer($data) );
+        LogControl::insert(__FILE__, __LINE__, "create customer, output data: $result");
+        echo $result;
         die();
     }
 
@@ -161,8 +171,8 @@ class WooSellerAssistant {
         $response = [
             "new" => [],
             "update" => [],
-            "log" => []
         ];
+        $log = "";
         $contacts = ZohoBooks::list_all_contacts();
         foreach( $contacts as $contact ) {
             if( $contact['contact_type']=='customer' ) {
@@ -196,7 +206,7 @@ class WooSellerAssistant {
                         $contact['contact_id']
                     );
                     $response["new"][] = $contact;
-                    $response["log"][] = "User create with ID $user_id";
+                    $log .= "User create with ID $user_id, ";
                 } else {
                     $username = explode('@', $contact['email'])[0];
                     $user_id = wp_insert_user([
@@ -227,10 +237,11 @@ class WooSellerAssistant {
                         $contact['contact_id']
                     );
                     $response["update"][] = $contact;
-                    $response["log"][] = "User update with ID $user_id";
+                    $log .= "User update with ID $user_id, ";
                 }
             }
         }
+        LogControl::insert(__FILE__, __LINE__, $log);
         echo json_encode( $response );
         die();
     }
@@ -239,14 +250,13 @@ class WooSellerAssistant {
         $response = [
             "new" => [],
             "update" => [],
-            "log" => []
         ];
+        $log = "";
         $items = ZohoBooks::list_all_items();
         foreach( $items as $item ) {
             if( $item['product_type']=='goods' && $item['status']=='active' ) {
                 $sku = ($item['sku']!='') ? $item['sku'] : 'sku-'.$item['account_id'].'-'.$item['item_id'];
                 $product_id = wc_get_product_id_by_sku($sku);
-                $response["log"][] = "Product ID: $product_id";
                 if( $product_id ) {
                     $image_document_id = $item['image_document_id'];
                     $organization_id = get_option('wsa_zoho_book_organization', '');
@@ -255,8 +265,6 @@ class WooSellerAssistant {
                         $url_image = "https://books.zoho.com/api/v3/documents/$image_document_id?organization_id=$organization_id&inline=true";    
                     }
                     $product = new WC_Product( $product_id );
-                    $response["log"][] = "Price compare: ".$product->get_regular_price()."!=".$item['rate']."?";
-                    $response["log"][] = "Name compare: ".$product->get_name()."!=".$item['name']."?";
                     if( $product->get_regular_price()!=$item['rate'] || $product->get_name()!=$item['name'] ) {
                         $product->set_regular_price( $item['rate'] );
                         $product->set_name( $item['name'] );
@@ -282,7 +290,8 @@ class WooSellerAssistant {
                             '_book_unit',
                             $item['unit']
                         );
-                        $response["log"][] = "Result save: $id";
+                        
+                        $log .= "Result save: $id, ";
                         $response["update"][] = $item;
                     }
                 } else {
@@ -315,11 +324,12 @@ class WooSellerAssistant {
                         '_book_unit',
                         $item['unit']
                     );
-                    $response["log"][] = "Result save: $id";
+                    $log .= "Result save: $id, ";
                     $response["new"][] = $item;
                 }
             }
         }
+        LogControl::insert(__FILE__, __LINE__, $log);
         echo json_encode( $response );
         die();
     }
@@ -332,17 +342,20 @@ class WooSellerAssistant {
             $refresh_token = ZohoBooks::generate_code( $code, $client_id, $client_secret );
             if( !$refresh_token ) {
                 update_option('wsa_zoho_token_error', '1');
+                LogControl::insert(__FILE__, __LINE__, "Error al crear Refresh Token");
                 die('0');
             }
             update_option( 'wsa_zoho_refresh_token', $refresh_token );
             $access_token = ZohoBooks::refresh_token( $refresh_token, $client_id, $client_secret );
             if( !$access_token ) {
                 update_option('wsa_zoho_token_error', '1');
+                LogControl::insert(__FILE__, __LINE__, "Error al crear Access Token");
                 die('0');
             }
             update_option( 'wsa_zoho_access_token', $access_token );
             update_option( 'wsa_zoho_access_token_time', date('Y-m-d H:i:s') );
             update_option('wsa_zoho_token_error', '0');
+            LogControl::insert(__FILE__, __LINE__, "Aprobado este codigo $code => generado refresh token $access_token");
             echo "Aprobado este codigo $code <br/> generado refresh token $access_token";
             die();
         }
@@ -382,6 +395,7 @@ class WooSellerAssistant {
         $response = ZohoBooks::create_payment( DataFormat::order_data_to_payment_data( $order ) );
         if( count($response)!=0 ) {
             update_post_meta( $order->get_id(), '_book_paid', 1 );
+            LogControl::insert(__FILE__, __LINE__, "Pagada orden $order_id, respuesta ".json_encode( $response ));
         }
     }
 
@@ -418,6 +432,7 @@ class WooSellerAssistant {
         
         $invoice = ZohoBooks::create_invoice( DataFormat::order_to_data_invoice( $order ) );
         if( isset($invoice["invoice_id"]) ) {
+            LogControl::insert(__FILE__, __LINE__, "Creada factura ".$invoice['invoice_id']." para la orden ".$order->get_id());
             update_post_meta(
                 $order->get_id(),
                 '_book_invoice_id',
@@ -429,6 +444,7 @@ class WooSellerAssistant {
                 0
             );
         } else {
+            LogControl::insert(__FILE__, __LINE__, "No se pudo crear factura para la orden ".$order->get_id() );
             update_post_meta(
                 $order->get_id(),
                 '_book_error',
@@ -507,12 +523,14 @@ class WooSellerAssistant {
     }
 
     public static function set_rate_usd( $value = 1 ) {
+        $id = get_current_user_id();
         SC_Rates::new_rate([
             "currency" => "USD",
             "value" => $value,
             "target" => "[]",
             "created_at" => date("Y-m-d H:i:s")
         ]);
+        LogControl::insert(__FILE__, __LINE__, "Acutalizada tasa por usuario al nuevo valor: $value");
     }
 
     public static function get_rate_usd($currency = "USD", $date = null) {
