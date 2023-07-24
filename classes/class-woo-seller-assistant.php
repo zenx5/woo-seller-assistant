@@ -47,21 +47,128 @@ class WooSellerAssistant {
         add_action( 'wp_ajax_import_customers', [__CLASS__, 'action_import_customers']);
         add_action( 'wp_ajax_create_invoice', [__CLASS__, 'action_create_invoice']);
         add_action( 'wp_ajax_create_customer', [__CLASS__, 'action_create_customer']);
+        add_action( 'wp_ajax_update_default_quantity', [__CLASS__, 'action_get_list_quantities_html']);
         remove_action( 'wp_loaded', array( 'WC_Form_Handler', 'update_cart_action' ), 20 );
         add_action( 'wp_loaded', array( 'WC_Cart_Two', 'update_cart_action' ), 20 );
         add_filter( 'wsa_price_in_cart', [__CLASS__, 'get_price_in_cart'],1,3);
         add_filter( 'woocommerce_checkout_customer_id', [__CLASS__, 'set_order_customer_id']);
+        add_filter( 'woocommerce_add_to_cart_product_id', [__CLASS__, 'add_to_cart']);
         add_action( 'woocommerce_checkout_create_order_line_item', [__CLASS__, 'update_item_order'], 1, 4);
         add_action( 'woocommerce_checkout_order_created', [__CLASS__, 'order_created'] );
         add_action( 'woocommerce_checkout_order_created', [__CLASS__, 'update_user_data'] );
         add_action( 'woocommerce_order_status_completed', [__CLASS__, 'pay_invoice']);
         add_action( 'woocommerce_admin_order_data_after_order_details', [__CLASS__, 'book_details']);
+        add_action( 'woocommerce_product_options_related', [__CLASS__, 'related_product_default_quantity']);
         add_action( 'wp_head', [__CLASS__, 'js_head']);
         add_action( 'wp_footer', [__CLASS__, 'js_footer']);
         add_action( 'save_post', [__CLASS__, 'update_custom_field']);
         add_filter( 'manage_edit-shop_order_columns', [__CLASS__, 'add_column_list_shop_order']);
         add_action( 'manage_posts_custom_column',  [__CLASS__, 'column_shop_order_content']);
         add_filter( 'posts_clauses', [__CLASS__, 'woocommerce_get_catalog_ordering_args']);
+        add_action( 'add_meta_boxes', [__CLASS__, 'product_grouped_linked']);
+    }
+
+    public static function product_grouped_linked() {
+        if( isset( $_GET['post'] ) ) {
+            $product = new WC_Product_Grouped( $_GET['post'] );
+            if( count( $product->get_children() ) )  {
+                function meta_product_combo() {
+                    $query = new WP_Query([
+                        'post_type' => 'product',
+                        'product_type' => 'simple',
+                        'posts_per_page' => -1
+                    ]);
+
+                    $product_combo_id = count(get_post_meta( $_GET['post'], 'product_combo_id')) ? get_post_meta( $_GET['post'], 'product_combo_id')[0] : $_GET['post'];
+
+                    ?>
+                        <select name="product_combo_id">
+                            <?php foreach( $query->posts as $post ):
+                                $product = new WC_Product( $post->ID );
+                            ?>
+                                <option value="<?=$post->ID?>" <?=$product_combo_id==$post->ID?'selected':''?>  ><?=$product->get_name()?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    <?php
+                }
+        
+                add_meta_box( 'woo-product-combo', 'Configurar Combo', 'meta_product_combo', 'product', 'normal', 'high' );
+            }
+        }
+    }
+
+    public static function add_to_cart($product_id) {
+        if(isset($_REQUEST['add_to_cart_combo'])) {
+            return $_REQUEST['add-to-cart-combo-id'];
+        }
+        return $product_id;
+    }
+
+    public static function get_grouped_childrens( $product_id ) {
+        $product = new WC_Product_Grouped( $product_id );
+        $childrens = [];
+        foreach ( $product->get_children() as $id ) {
+            $product_children = new WC_Product($id);
+            $childrens[] = [
+                "id" => $id,
+                "name" => $product_children->get_name(),
+                "value" => count(get_post_meta( $product_id, 'default_quantity_'.$id )) ? get_post_meta( $product_id, 'default_quantity_'.$id )[0] : 0
+            ];
+        }
+        return $childrens;
+    }
+
+    public static function related_product_default_quantity() {
+        if( isset( $_GET['post'] ) && isset( $_GET['action'] ) ) {
+            $style = "width:25%; border-radius:4px; font-size:1rem; margin:4px; padding:4px;";
+            self::get_grouped_childrens($_GET['post'])
+        ?>
+            <div style="position:relative; width:80%; left:20%">
+                <p class="form-field">
+                    <label>Default Quantities</label>
+                </p>
+                <input type="hidden" name="ids_grouped" value=""/>
+                <ul id="list-quantities"></ul>
+                <script>
+                    const loadQuantities = () => {
+                        const params = new URLSearchParams( document.location.search )
+                        fetch(ajaxurl, {
+                            method:'post',
+                            headers:{
+                                'Content-Type':'application/x-www-form-urlencoded'
+                            },
+                            body: 'action=update_default_quantity&post='+params.get('post')
+                        })
+                            .then( response => response.json() )
+                            .then( data => {
+                                console.log( data )
+                                jQuery('#list-quantities').html( data.html )
+                                jQuery('input[name="ids_grouped"]').val( data.ids.join(',') )
+                            })
+                    }
+                    jQuery('#grouped_products').change(loadQuantities)
+                    loadQuantities()
+                </script>
+            </div>
+        <?php
+        }
+    }
+
+    public static function action_get_list_quantities_html() {
+        $ids = [];
+        $childrens = self::get_grouped_childrens($_POST['post']);
+        $html = '';
+            foreach( $childrens as $children ){
+                $ids[] = $children['id'];
+                $html .= '<li style="display:flex; flex-direction:row; justify-content:center; align-items:center:">';
+                $html .= '<label>'.$children['name'].'</label>';
+                $html .= '<input type="number" name="default_quantity_'.$children['id'].'" style="width:25%; border-radius:4px; font-size:1rem; margin:4px; padding:4px;" value="'.$children['value'].'"/></li>';
+            }
+        echo json_encode([
+            "html" => $html,
+            "ids" => $ids
+        ]);
+        die();
     }
 
     public static function woocommerce_get_catalog_ordering_args($args) {
@@ -397,6 +504,15 @@ class WooSellerAssistant {
     public static function update_custom_field($post_id) {
         if (isset($_POST['order_rate_usd'])) {
             update_post_meta($post_id, 'order_rate_usd', sanitize_text_field($_POST['order_rate_usd']));
+        }
+        if (isset($_POST['ids_grouped'])) {
+            $ids = explode(',', $_POST['ids_grouped']);
+            foreach( $ids as $id ) {
+                update_post_meta($post_id, "default_quantity_$id", sanitize_text_field($_POST["default_quantity_$id"]));
+            }
+        }
+        if( isset($_POST['product_combo_id']) ) {
+            update_post_meta($post_id, 'product_combo_id', sanitize_text_field($_POST['product_combo_id']));
         }
     }
 
