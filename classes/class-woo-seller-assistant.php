@@ -52,6 +52,7 @@ class WooSellerAssistant {
         add_action( 'wp_loaded', array( 'WC_Cart_Two', 'update_cart_action' ), 20 );
         add_filter( 'wsa_price_in_cart', [__CLASS__, 'get_price_in_cart'],1,3);
         add_filter( 'woocommerce_checkout_customer_id', [__CLASS__, 'set_order_customer_id']);
+        add_filter( 'woocommerce_add_to_cart_product_id', [__CLASS__, 'add_to_cart']);
         add_action( 'woocommerce_checkout_create_order_line_item', [__CLASS__, 'update_item_order'], 1, 4);
         add_action( 'woocommerce_checkout_order_created', [__CLASS__, 'order_created'] );
         add_action( 'woocommerce_checkout_order_created', [__CLASS__, 'update_user_data'] );
@@ -64,6 +65,43 @@ class WooSellerAssistant {
         add_filter( 'manage_edit-shop_order_columns', [__CLASS__, 'add_column_list_shop_order']);
         add_action( 'manage_posts_custom_column',  [__CLASS__, 'column_shop_order_content']);
         add_filter( 'posts_clauses', [__CLASS__, 'woocommerce_get_catalog_ordering_args']);
+        add_action( 'add_meta_boxes', [__CLASS__, 'product_grouped_linked']);
+    }
+
+    public static function product_grouped_linked() {
+        if( isset( $_GET['post'] ) ) {
+            $product = new WC_Product_Grouped( $_GET['post'] );
+            if( count( $product->get_children() ) )  {
+                function meta_product_combo() {
+                    $query = new WP_Query([
+                        'post_type' => 'product',
+                        'product_type' => 'simple',
+                        'posts_per_page' => -1
+                    ]);
+
+                    $product_combo_id = count(get_post_meta( $_GET['post'], 'product_combo_id')) ? get_post_meta( $_GET['post'], 'product_combo_id')[0] : $_GET['post'];
+
+                    ?>
+                        <select name="product_combo_id">
+                            <?php foreach( $query->posts as $post ):
+                                $product = new WC_Product( $post->ID );
+                            ?>
+                                <option value="<?=$post->ID?>" <?=$product_combo_id==$post->ID?'selected':''?>  ><?=$product->get_name()?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    <?php
+                }
+        
+                add_meta_box( 'woo-product-combo', 'Configurar Combo', 'meta_product_combo', 'product', 'normal', 'high' );
+            }
+        }
+    }
+
+    public static function add_to_cart($product_id) {
+        if(isset($_REQUEST['add_to_cart_combo'])) {
+            return $_REQUEST['add-to-cart-combo-id'];
+        }
+        return $product_id;
     }
 
     public static function get_grouped_childrens( $product_id ) {
@@ -472,6 +510,9 @@ class WooSellerAssistant {
             foreach( $ids as $id ) {
                 update_post_meta($post_id, "default_quantity_$id", sanitize_text_field($_POST["default_quantity_$id"]));
             }
+        }
+        if( isset($_POST['product_combo_id']) ) {
+            update_post_meta($post_id, 'product_combo_id', sanitize_text_field($_POST['product_combo_id']));
         }
     }
 

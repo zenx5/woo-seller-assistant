@@ -23,6 +23,10 @@ function get_default_quantity($product_id, $product_child_id) {
 	return count(get_post_meta( $product_id, 'default_quantity_'.$product_child_id )) ? get_post_meta( $product_id, 'default_quantity_'.$product_child_id )[0] : '';
 }
 
+function get_single_combo_id($product_id) {
+	return count(get_post_meta( $product_id, 'product_combo_id')) ? get_post_meta( $product_id, 'product_combo_id')[0] : $product_id;
+}
+
 do_action( 'woocommerce_before_add_to_cart_form' ); ?>
 
 <form class="cart grouped_form" action="<?php echo esc_url( apply_filters( 'woocommerce_add_to_cart_form_action', $product->get_permalink() ) ); ?>" method="post" enctype='multipart/form-data'>
@@ -116,13 +120,16 @@ do_action( 'woocommerce_before_add_to_cart_form' ); ?>
 	</table>
 
 	<input type="hidden" name="add-to-cart" value="<?php echo esc_attr( $product->get_id() ); ?>" />
+	<input type="hidden" name="add-to-cart-combo-id" value="<?=get_single_combo_id( $product->get_id() )?>" />
 
 	<?php if ( $quantites_required && $show_add_to_cart_button ) : ?>
 
 		<?php do_action( 'woocommerce_before_add_to_cart_button' ); ?>
 
-		<button type="submit" class="single_add_to_cart_button button alt<?php echo esc_attr( wc_wp_theme_get_element_class_name( 'button' ) ? ' ' . wc_wp_theme_get_element_class_name( 'button' ) : '' ); ?>"><?php echo esc_html( $product->single_add_to_cart_text() ); ?></button>
-
+		<span style="display:flex; flex-direction:row; gap:5px;">
+			<button type="submit" class="button" name="add_to_cart_combo">Agregar Combo</button>
+			<button type="submit" class="single_add_to_cart_button button alt<?php echo esc_attr( wc_wp_theme_get_element_class_name( 'button' ) ? ' ' . wc_wp_theme_get_element_class_name( 'button' ) : '' ); ?>">Agregar Productos</button>
+		</span>
 		<?php do_action( 'woocommerce_after_add_to_cart_button' ); ?>
 
 	<?php endif; ?>
