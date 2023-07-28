@@ -22,7 +22,8 @@ class SC_Rates {
     }
 
     public static function drop_table() { 
-        $sql = "drop table second_currency_rates";
+        $prefix = $wpdb->prefix;
+        $sql = "drop table {$prefix}second_currency_rates";
         require_once(ABSPATH.'wp-admin/includes/upgrade.php');
         dbDelta($sql);
     }
