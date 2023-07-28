@@ -69,7 +69,7 @@ class WooSellerAssistant {
     }
 
     public static function product_grouped_linked() {
-        if( isset( $_GET['post'] ) ) {
+        if( isset( $_GET['post'] ) && is_product() ) {
             $product = new WC_Product_Grouped( $_GET['post'] );
             if( count( $product->get_children() ) )  {
                 function meta_product_combo() {
