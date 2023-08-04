@@ -104,7 +104,7 @@ class ZohoBooks extends ZohoApi {
     }
 
     public static function list_all_items($id = null, $page = 1) {
-        return self::get_single_resource('items', $id, $page);
+        return self::get_single_resource('items', $id, 'item', $page);
     }
 
     public static function list_all_invoices($id = null) {
