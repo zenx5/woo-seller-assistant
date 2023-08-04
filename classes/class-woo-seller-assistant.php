@@ -91,7 +91,6 @@ class WooSellerAssistant {
                         </select>
                     <?php
                 }
-        
                 add_meta_box( 'woo-product-combo', 'Configurar Combo', 'meta_product_combo', 'product', 'normal', 'high' );
             }
         }
@@ -175,7 +174,7 @@ class WooSellerAssistant {
         if( isset($_GET['searchbysku']) ) {
             $sku = isset($_GET['searchbysku']) ? $_GET['searchbysku'] : '';
             $args['join'] .= " LEFT JOIN wp_wc_product_meta_lookup ON (wp_posts.ID=wp_wc_product_meta_lookup.product_id) ";
-            $args['where'] .= " AND wp_wc_product_meta_lookup.sku LIKE '%$sku%' ";
+            $args['where'] .= " AND (wp_wc_product_meta_lookup.sku LIKE '%$sku%' OR wp_posts.post_title LIKE '%$sku%' OR wp_posts.post_name LIKE '%$sku%') ";
         }
         return $args;
     }
@@ -367,10 +366,13 @@ class WooSellerAssistant {
         $response = [
             "new" => [],
             "update" => [],
+            "ids" => []
         ];
         $log = "";
-        $items = ZohoBooks::list_all_items();
+        $page = isset($_POST['page']) ? $_POST['page'] : 1;
+        $items = ZohoBooks::list_all_items(null, $page);
         foreach( $items as $item ) {
+            $response["ids"][] = $item['name'];
             if( $item['product_type']=='goods' && $item['status']=='active' ) {
                 $sku = ($item['sku']!='') ? $item['sku'] : 'sku-'.$item['account_id'].'-'.$item['item_id'];
                 $product_id = wc_get_product_id_by_sku($sku);
@@ -379,7 +381,7 @@ class WooSellerAssistant {
                     $organization_id = get_option('wsa_zoho_book_organization', '');
                     $url_image = "";
                     if( count( $image_document_id )>4 )  {
-                        $url_image = "https://books.zoho.com/api/v3/documents/$image_document_id?organization_id=$organization_id&inline=true";    
+                        $url_image = "https://books.zoho.com/api/v3/documents/$image_document_id?organization_id=$organization_id&inline=true";
                     }
                     $product = new WC_Product( $product_id );
                     if( $product->get_regular_price()!=$item['rate'] || $product->get_name()!=$item['name'] ) {
@@ -407,7 +409,7 @@ class WooSellerAssistant {
                             '_book_unit',
                             $item['unit']
                         );
-                        
+
                         $log .= "Result save: $id, ";
                         $response["update"][] = $item;
                     }

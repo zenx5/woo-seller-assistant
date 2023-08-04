@@ -20,9 +20,14 @@
                     value="<?=$woo_private_client?>"/>
             </td>
         </tr>
-        
     </table>
-    <button type="button" style="margin-top:20px; padding:5px 20px;" class="save-config button">Guardar</button>
-    <button style="margin-top:20px; padding:5px 20px;" class="button btn-import-from-zoho" data-action="import_products">Importar Productos</button>
-    <button style="margin-top:20px; padding:5px 20px;" class="button btn-import-from-zoho" data-action="import_customers">Importar Clientes</button>
+    <div style="display:flex; flex-direction:row; align-items:center; gap:5px;">
+        <button type="button" style="margin-top:20px; padding:5px 20px;" class="save-config button">Guardar</button>
+        <button style="margin-top:20px; padding:5px 20px;" class="button btn-import-from-zoho" data-action="import_products">Importar Productos</button>
+        <button style="margin-top:20px; padding:5px 20px;" class="button btn-import-from-zoho" data-action="import_customers">Importar Clientes</button>
+        <span style="padding:5px; display:flex; flex-direction:row; margin-top:20px; gap:5px">
+            <label style="display:flex; align-items:center;">Page:</label>
+            <input type="number" value="1" name="import_page" style="padding: 5px 20px; margin: 5px;"/>
+        </span>
+    </div>
 </div>
