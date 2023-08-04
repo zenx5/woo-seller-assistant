@@ -103,21 +103,21 @@ class ZohoBooks extends ZohoApi {
         return self::get_single_resource('contacts', $id, 'contact');
     }
 
-    public static function list_all_items($id = null) {
-        return self::get_single_resource('items', $id);
+    public static function list_all_items($id = null, $page = 1) {
+        return self::get_single_resource('items', $id, $page);
     }
 
     public static function list_all_invoices($id = null) {
         return self::get_single_resource('invoices', $id);
     }
 
-    public static function get_single_resource($resource, $id = null, $singular_resource = '' ) {
+    public static function get_single_resource($resource, $id = null, $singular_resource = '', $page = 1 ) {
         $organization_id = get_option('wsa_zoho_book_organization', '');
         $response = self::get_token();
         if( $response["error"]==1 ) return [];
         $access_token = $response["access_token"];
 
-        $url = $id ? self::$baseurl."$resource/$id?organization_id=$organization_id" : self::$baseurl."$resource?organization_id=$organization_id";
+        $url = $id ? self::$baseurl."$resource/$id?organization_id=$organization_id" : self::$baseurl."$resource?organization_id=$organization_id&page=$page";
         $key = $id ? ( $singular_resource=='' ? $resource : $singular_resource ) : $resource;
         $headers = [
             'Authorization:  Zoho-oauthtoken '.$access_token
