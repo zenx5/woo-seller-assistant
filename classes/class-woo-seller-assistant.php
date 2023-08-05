@@ -39,6 +39,7 @@ class WooSellerAssistant {
     }
 
     public static function init() {
+        add_filter( 'wc_get_template_part', [__CLASS__, 'template_replace_part'],1,3);
         add_filter( 'woocommerce_locate_template', [__CLASS__, 'template_replace'],1,3);
         add_action( 'admin_menu', [__CLASS__, 'admin_menu']);
         add_action( 'wp_ajax_update_config', [__CLASS__, 'action_update_config']);
@@ -557,7 +558,7 @@ class WooSellerAssistant {
             'order_rate_usd',
             WooSellerAssistant::get_rate_usd()
         );
-        
+
         $invoice = ZohoBooks::create_invoice( DataFormat::order_to_data_invoice( $order ) );
         if( isset($invoice["invoice_id"]) ) {
             LogControl::insert(__FILE__, __LINE__, "Creada factura ".$invoice['invoice_id']." para la orden ".$order->get_id());
@@ -751,28 +752,36 @@ class WooSellerAssistant {
             self::wc_price($raw, $total );
     }
 
+    public static function template_replace_part( $template, $slug, $name ) {
+        $plugin_path = plugin_dir_path(__DIR__).'template/woocommerce/';
+        if( file_exists( $plugin_path . $slug ."-" . $name . ".php" ) ) {
+            return $plugin_path . $slug ."-" . $name . ".php";
+        }
+        return $template;
+    }
+
     public static function template_replace( $template, $template_name, $template_path) {
         global $woocommerce;
         $_template = $template;
-        if ( ! $template_path ) 
+        if ( ! $template_path )
             $template_path = $woocommerce->template_url;
-    
+
         $plugin_path = plugin_dir_path(__DIR__).'template/woocommerce/';
-        
+
         $template = locate_template(
             array(
                 $template_path . $template_name,
                 $template_name
             )
         );
-        
+
         if( ! $template && file_exists( $plugin_path . $template_name ) )
             $template = $plugin_path . $template_name;
-        
+
         if ( ! $template )
             $template = $_template;
 
         return $template;
     }
-    
+
 }
